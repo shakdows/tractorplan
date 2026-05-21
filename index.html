@@ -163,6 +163,7 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
   <div class="nr">
     <span class="sp" id="STATUS_BAR">Sin datos cargados</span>
     <button id="BTN_OPEN_MODAL" class="btn bg sm">&#128194; Cargar datos</button>
+    <button id="BTN_RESET" class="btn bg sm" title="Restablecer todos los filtros y vistas">&#8635; Reset</button>
     <button id="BTN_EXPORT_ALL" class="btn bG sm">&#11015; Excel Completo</button>
   </div>
 </nav>
@@ -496,6 +497,9 @@ window.onload = function() {
 
   // Export all button
   document.getElementById('BTN_EXPORT_ALL').addEventListener('click', exportAll);
+
+  // RESET button
+  document.getElementById('BTN_RESET').addEventListener('click', resetAll);
 
   // Download panel buttons
   var dlMap = {
@@ -1548,6 +1552,72 @@ function showCompare() {
 // ============================================================
 // EXPORTS
 // ============================================================
+// ============================================================
+// RESET ALL
+// ============================================================
+function resetAll() {
+  // Reset all search inputs
+  var searches = ['ART_SEARCH','OC_SEARCH','IMP_SEARCH','SIN_SEARCH'];
+  searches.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+
+  // Reset all dropdowns
+  var sels = ['ART_FAM','ART_MARCA','OC_FAM','OC_MARCA','IMP_FAM','IMP_MARCA','SIN_FAM','SIN_MARCA'];
+  sels.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+
+  // Reset class filters
+  artCls = ''; ocCls = '';
+  document.querySelectorAll('#ART_CLASE_TABS .vb').forEach(function(b,i){ b.classList.toggle('on', i===0); });
+  document.querySelectorAll('#OC_CLASE_TABS .vb').forEach(function(b,i){ b.classList.toggle('on', i===0); });
+
+  // Reset sorts
+  artSortK='ing_tot'; artSortA=false;
+  ocSortK='ing6m';   ocSortA=false;
+  impSortK='acel_pct'; impSortA=false;
+  sinSortK='dias_sin'; sinSortA=false;
+
+  // Reset toggles
+  hideSin=false; hideC=false;
+  document.getElementById('TGL_SIN').classList.remove('on');
+  document.getElementById('TGL_C').classList.remove('on');
+
+  // Reset zoom and chart type
+  zoomN=24; chartType='ing';
+  document.getElementById('ZOOM_LABEL').textContent='24 sem.';
+  document.querySelectorAll('#PLAN_TYPE_TABS .vb').forEach(function(b,i){ b.classList.toggle('on', i===0); });
+  document.getElementById('CTAB_ing').classList.add('on');
+  document.getElementById('CTAB_cant').classList.remove('on');
+
+  // Close family detail panel if open
+  if (typeof closeFamDetail === 'function') closeFamDetail();
+
+  // Close product modal if open
+  document.getElementById('PROD_MODAL').style.display='none';
+  document.body.style.overflow='';
+
+  // Go back to dashboard
+  showPage('dash');
+
+  // Re-render all tables
+  renderArt();
+  renderOC();
+  renderImp();
+  renderSin();
+  renderPlanTable();
+  renderMainChart();
+
+  // Visual feedback
+  var btn = document.getElementById('BTN_RESET');
+  var orig = btn.textContent;
+  btn.textContent = '✅ Restablecido';
+  btn.style.color = '#16a34a';
+  btn.style.borderColor = '#16a34a';
+  setTimeout(function(){
+    btn.textContent = orig;
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }, 1500);
+}
+
 function dlCSV(rows, fname) {
   if (!rows || !rows.length) { alert('No hay datos.'); return; }
   var keys = Object.keys(rows[0]);
