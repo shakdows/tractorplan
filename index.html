@@ -1069,7 +1069,7 @@ function renderFamCards() {
     var sin = its.filter(function(i){return i.dias_sin>90;}).length;
     var color = famColor(f);
     return '<div id="FAMCARD_'+f+'" style="background:var(--w);border:1px solid '+color+'33;border-radius:9px;padding:14px;cursor:pointer;transition:transform .15s,box-shadow .15s" '
-      +'onclick="openFamDetail(\''+f+'\')" '
+      +'onclick="toggleFamDetail(\''+f+'\')" '
       +'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 14px '+color+'22\'" '
       +'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
       +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
@@ -1108,6 +1108,15 @@ function getFamDetailRows() {
   if (famDetailCls) rows = rows.filter(function(i){return i.clase===famDetailCls;});
   rows.sort(function(a,b){return b.ing_tot-a.ing_tot;});
   return rows;
+}
+
+function toggleFamDetail(f) {
+  // If same family clicked again → close it
+  if (famDetailFam === f && document.getElementById('FAM_DETAIL_PANEL').style.display !== 'none') {
+    closeFamDetail();
+    return;
+  }
+  openFamDetail(f);
 }
 
 function openFamDetail(f) {
@@ -1556,147 +1565,431 @@ function showCompare() {
 // RESET ALL
 // ============================================================
 function resetAll() {
-  // Reset all search inputs
-  var searches = ['ART_SEARCH','OC_SEARCH','IMP_SEARCH','SIN_SEARCH'];
-  searches.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  // Find active page
+  var active = '';
+  ['dash','fam','art','oc','imp','sin','plan'].forEach(function(p){
+    if(document.getElementById('PAGE_'+p) && document.getElementById('PAGE_'+p).classList.contains('on')) active=p;
+  });
 
-  // Reset all dropdowns
-  var sels = ['ART_FAM','ART_MARCA','OC_FAM','OC_MARCA','IMP_FAM','IMP_MARCA','SIN_FAM','SIN_MARCA'];
-  sels.forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  if (active === 'art') {
+    document.getElementById('ART_SEARCH').value='';
+    document.getElementById('ART_FAM').value='';
+    document.getElementById('ART_MARCA').value='';
+    artCls=''; artSortK='ing_tot'; artSortA=false;
+    document.querySelectorAll('#ART_CLASE_TABS .vb').forEach(function(b,i){b.classList.toggle('on',i===0);});
+    renderArt();
 
-  // Reset class filters
-  artCls = ''; ocCls = '';
-  document.querySelectorAll('#ART_CLASE_TABS .vb').forEach(function(b,i){ b.classList.toggle('on', i===0); });
-  document.querySelectorAll('#OC_CLASE_TABS .vb').forEach(function(b,i){ b.classList.toggle('on', i===0); });
+  } else if (active === 'oc') {
+    document.getElementById('OC_SEARCH').value='';
+    document.getElementById('OC_FAM').value='';
+    document.getElementById('OC_MARCA').value='';
+    ocCls=''; ocSortK='ing6m'; ocSortA=false;
+    document.querySelectorAll('#OC_CLASE_TABS .vb').forEach(function(b,i){b.classList.toggle('on',i===0);});
+    renderOC();
 
-  // Reset sorts
-  artSortK='ing_tot'; artSortA=false;
-  ocSortK='ing6m';   ocSortA=false;
-  impSortK='acel_pct'; impSortA=false;
-  sinSortK='dias_sin'; sinSortA=false;
+  } else if (active === 'imp') {
+    document.getElementById('IMP_SEARCH').value='';
+    document.getElementById('IMP_FAM').value='';
+    document.getElementById('IMP_MARCA').value='';
+    impSortK='acel_pct'; impSortA=false;
+    renderImp();
 
-  // Reset toggles
-  hideSin=false; hideC=false;
-  document.getElementById('TGL_SIN').classList.remove('on');
-  document.getElementById('TGL_C').classList.remove('on');
+  } else if (active === 'sin') {
+    document.getElementById('SIN_SEARCH').value='';
+    document.getElementById('SIN_FAM').value='';
+    document.getElementById('SIN_MARCA').value='';
+    sinSortK='dias_sin'; sinSortA=false;
+    renderSin();
 
-  // Reset zoom and chart type
-  zoomN=24; chartType='ing';
-  document.getElementById('ZOOM_LABEL').textContent='24 sem.';
-  document.querySelectorAll('#PLAN_TYPE_TABS .vb').forEach(function(b,i){ b.classList.toggle('on', i===0); });
-  document.getElementById('CTAB_ing').classList.add('on');
-  document.getElementById('CTAB_cant').classList.remove('on');
+  } else if (active === 'fam') {
+    closeFamDetail();
 
-  // Close family detail panel if open
-  if (typeof closeFamDetail === 'function') closeFamDetail();
+  } else if (active === 'plan') {
+    zoomN=24; chartType='ing';
+    document.getElementById('ZOOM_LABEL').textContent='24 sem.';
+    document.querySelectorAll('#PLAN_TYPE_TABS .vb').forEach(function(b,i){b.classList.toggle('on',i===0);});
+    document.getElementById('CTAB_ing').classList.add('on');
+    document.getElementById('CTAB_cant').classList.remove('on');
+    renderPlanTable(); renderMainChart();
 
-  // Close product modal if open
-  document.getElementById('PROD_MODAL').style.display='none';
-  document.body.style.overflow='';
-
-  // Go back to dashboard
-  showPage('dash');
-
-  // Re-render all tables
-  renderArt();
-  renderOC();
-  renderImp();
-  renderSin();
-  renderPlanTable();
-  renderMainChart();
+  } else {
+    // Dashboard — reset toggles
+    hideSin=false; hideC=false;
+    document.getElementById('TGL_SIN').classList.remove('on');
+    document.getElementById('TGL_C').classList.remove('on');
+    renderArt(); renderOC(); renderImp(); renderSin();
+  }
 
   // Visual feedback
   var btn = document.getElementById('BTN_RESET');
-  var orig = btn.textContent;
-  btn.textContent = '✅ Restablecido';
+  var orig = btn.innerHTML;
+  btn.innerHTML = '&#10003; Listo';
   btn.style.color = '#16a34a';
   btn.style.borderColor = '#16a34a';
   setTimeout(function(){
-    btn.textContent = orig;
+    btn.innerHTML = orig;
     btn.style.color = '';
     btn.style.borderColor = '';
-  }, 1500);
+  }, 1200);
 }
 
-function dlCSV(rows, fname) {
-  if (!rows || !rows.length) { alert('No hay datos.'); return; }
+// ============================================================
+// EXCEL EXPORT - FORMATO PROFESIONAL
+// ============================================================
+
+// Columnas con ancho, tipo y color de cabecera por tipo de reporte
+var COL_DEFS = {
+  'Codigo':         {w:18, t:'s'},
+  'Nombre':         {w:35, t:'s'},
+  'Familia':        {w:20, t:'s'},
+  'Marca':          {w:10, t:'s'},
+  'Clase':          {w:8,  t:'s'},
+  'Ing_Total_USD':  {w:16, t:'n', fmt:'#,##0.00'},
+  'Ing_6m_USD':     {w:14, t:'n', fmt:'#,##0.00'},
+  'Ing_Historico_USD':{w:18,t:'n', fmt:'#,##0.00'},
+  'Ing_Nuevo':      {w:14, t:'n', fmt:'#,##0.00'},
+  'Ing_Anterior':   {w:14, t:'n', fmt:'#,##0.00'},
+  'Diferencia_Ing': {w:14, t:'n', fmt:'#,##0.00'},
+  'Unid_6m':        {w:10, t:'n', fmt:'#,##0'},
+  'Unid_Total':     {w:11, t:'n', fmt:'#,##0'},
+  'Prev_3m':        {w:10, t:'n', fmt:'#,##0'},
+  'Curr_3m':        {w:10, t:'n', fmt:'#,##0'},
+  'Precio_USD':     {w:12, t:'n', fmt:'#,##0.00'},
+  'Prom_mensual':   {w:13, t:'n', fmt:'#,##0.0'},
+  'Stock_Rec_2m':   {w:13, t:'n', fmt:'#,##0'},
+  'Monto_OC_USD':   {w:14, t:'n', fmt:'#,##0.00'},
+  'Crecimiento_pct':{w:14, t:'n', fmt:'#,##0.0'},
+  'Dias_Sin_Mov':   {w:13, t:'n', fmt:'#,##0'},
+  'Dias_Sin_Nuevo': {w:14, t:'n', fmt:'#,##0'},
+  'Dias_Sin_Anterior':{w:16,t:'n', fmt:'#,##0'},
+  'Meses_Activo':   {w:13, t:'n', fmt:'#,##0'},
+  'Tendencia':      {w:16, t:'s'},
+  'Prioridad':      {w:16, t:'s'},
+  'Accion':         {w:18, t:'s'},
+  'Estado':         {w:16, t:'s'},
+  'Clase_Nueva':    {w:11, t:'s'},
+  'Clase_Anterior': {w:13, t:'s'},
+};
+
+// Header colors per report type
+var HDR_COLORS = {
+  'reponer':   'FF1E3A5F',  // dark blue
+  'claseA':    'FF15803D',  // dark green
+  'planoc':    'FF92400E',  // amber
+  'abc':       'FF1E3A5F',
+  'stock0':    'FF7F1D1D',  // dark red
+  'imp':       'FF7C2D12',  // orange-red
+  'sin':       'FF7F1D1D',
+  'creciendo': 'FF14532D',
+  'bajando':   'FF7F1D1D',
+  'diff':      'FF312E81',
+  'art':       'FF1E3A5F',
+  'default':   'FF1E3A5F',
+};
+
+function buildXLSX(data, titulo, tipo) {
+  var wb = XLSX.utils.book_new();
+  var hdrColor = HDR_COLORS[tipo] || HDR_COLORS['default'];
+  addFormattedSheet(wb, data, titulo, hdrColor);
+  var fname = 'TractorPlan_' + titulo.replace(/ /g,'_') + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+  XLSX.writeFile(wb, fname);
+}
+
+function addFormattedSheet(wb, rows, sheetName, hdrColor) {
+  if (!rows || !rows.length) return;
   var keys = Object.keys(rows[0]);
-  var csv = [keys.join(',')].concat(rows.map(function(r) {
-    return keys.map(function(k) { return '"' + String(r[k]||'').replace(/"/g,'""') + '"'; }).join(',');
-  })).join('\n');
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'}));
-  a.download = 'TractorPlan_' + fname + '_' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click();
+
+  // Build array-of-arrays for better control
+  var wsData = [keys]; // header row
+  rows.forEach(function(r) {
+    wsData.push(keys.map(function(k) {
+      var v = r[k];
+      var def = COL_DEFS[k];
+      if (def && def.t === 'n') return v === null || v === undefined || v === '' ? '' : +v;
+      return v === null || v === undefined ? '' : v;
+    }));
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = keys.map(function(k) {
+    var def = COL_DEFS[k];
+    return {wch: def ? def.w : 14};
+  });
+
+  // Number formats
+  keys.forEach(function(k, ci) {
+    var def = COL_DEFS[k];
+    if (!def || !def.fmt) return;
+    for (var ri = 1; ri < wsData.length; ri++) {
+      var addr = XLSX.utils.encode_cell({r: ri, c: ci});
+      if (ws[addr] && ws[addr].v !== '' && ws[addr].v !== null && ws[addr].v !== undefined) {
+        ws[addr].t = 'n';
+        ws[addr].z = def.fmt;
+      }
+    }
+  });
+
+  // Header styling (bold, color background, white text)
+  keys.forEach(function(k, ci) {
+    var addr = XLSX.utils.encode_cell({r: 0, c: ci});
+    if (!ws[addr]) ws[addr] = {v: k, t: 's'};
+    ws[addr].s = {
+      font: {bold: true, color: {rgb: 'FFFFFFFF'}, sz: 11},
+      fill: {fgColor: {rgb: hdrColor}},
+      alignment: {horizontal: 'center', vertical: 'center', wrapText: false},
+      border: {
+        bottom: {style: 'thin', color: {rgb: 'FFFFFFFF'}},
+        right:  {style: 'thin', color: {rgb: 'FFFFFFFF'}}
+      }
+    };
+  });
+
+  // Row alternating colors + data alignment
+  for (var ri = 1; ri < wsData.length; ri++) {
+    var isEven = ri % 2 === 0;
+    var rowBg = isEven ? 'FFF8FAFC' : 'FFFFFFFF';
+    keys.forEach(function(k, ci) {
+      var addr = XLSX.utils.encode_cell({r: ri, c: ci});
+      if (!ws[addr]) ws[addr] = {v: '', t: 's'};
+      var def = COL_DEFS[k];
+      var isNum = def && def.t === 'n';
+      ws[addr].s = {
+        fill: {fgColor: {rgb: rowBg}},
+        alignment: {horizontal: isNum ? 'right' : 'left', vertical: 'center'},
+        font: {sz: 10},
+        border: {bottom: {style: 'hair', color: {rgb: 'FFE2E8F0'}}}
+      };
+      // Highlight Clase column
+      if (k === 'Clase' || k === 'Clase_Nueva') {
+        var v = ws[addr].v;
+        var clColor = v==='A'?'FF15803D':v==='B'?'FF1D4ED8':'FF6B7280';
+        ws[addr].s.font = {bold: true, color: {rgb: clColor}, sz: 10};
+      }
+      // Highlight Accion / Prioridad
+      if ((k === 'Accion' || k === 'Prioridad') && ws[addr].v) {
+        var av = String(ws[addr].v);
+        if (av.indexOf('URGENTE')>=0 || av.indexOf('YA')>=0 || av.indexOf('LIQUIDAR')>=0)
+          ws[addr].s.font = {bold: true, color: {rgb: 'FFDC2626'}, sz: 10};
+        else if (av.indexOf('ALTA')>=0 || av.indexOf('PRONTO')>=0 || av.indexOf('REVISAR')>=0)
+          ws[addr].s.font = {bold: true, color: {rgb: 'FFD97706'}, sz: 10};
+        else if (av.indexOf('PLANIF')>=0 || av.indexOf('MEDIA')>=0)
+          ws[addr].s.font = {bold: false, color: {rgb: 'FF2563EB'}, sz: 10};
+      }
+      // Highlight Tendencia
+      if (k === 'Tendencia' && ws[addr].v) {
+        var tv = String(ws[addr].v);
+        if (tv.indexOf('CRECIENDO')>=0)
+          ws[addr].s.font = {bold: true, color: {rgb: 'FF16A34A'}, sz: 10};
+        else if (tv.indexOf('BAJANDO')>=0)
+          ws[addr].s.font = {bold: true, color: {rgb: 'FFDC2626'}, sz: 10};
+      }
+    });
+  }
+
+  // Freeze first row
+  ws['!freeze'] = {xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft'};
+
+  // Auto filter on header
+  ws['!autofilter'] = {ref: XLSX.utils.encode_range({r:0,c:0}, {r:wsData.length-1,c:keys.length-1})};
+
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0,31));
 }
 
 function artRow(r) {
-  return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
-    Ing_Total_USD:r.ing_tot.toFixed(2), Ing_6m_USD:r.ing6m.toFixed(2), Unid_6m:r.u6m,
-    Precio_USD:r.precio.toFixed(2), Prom_mensual:r.prom_men.toFixed(1),
-    Stock_Rec_2m:r.stock_rec, Monto_OC_USD:r.monto_oc.toFixed(2),
-    Tendencia:r.tend, Dias_Sin_Mov:r.dias_sin, Meses_Activo:r.meses_activo};
+  return {
+    Codigo: r.cod,
+    Nombre: r.nombre,
+    Familia: r.familia,
+    Marca: r.marca,
+    Clase: r.clase,
+    Ing_Total_USD: +r.ing_tot.toFixed(2),
+    Ing_6m_USD: +r.ing6m.toFixed(2),
+    Unid_6m: +r.u6m,
+    Precio_USD: +r.precio.toFixed(2),
+    Prom_mensual: +r.prom_men.toFixed(1),
+    Stock_Rec_2m: +r.stock_rec,
+    Monto_OC_USD: +r.monto_oc.toFixed(2),
+    Tendencia: r.tend,
+    Dias_Sin_Mov: +r.dias_sin,
+    Meses_Activo: +r.meses_activo
+  };
 }
 
 function dlSection(tipo) {
   if (!D) { alert('Primero carga datos.'); return; }
-  var rows, fname;
+  var rows, sheetName;
+  var hdrColor = HDR_COLORS[tipo] || HDR_COLORS['default'];
+
   if (tipo === 'reponer') {
-    rows = D.items.filter(function(r){return r.u6m>0&&(r.clase==='A'||r.clase==='B');}).sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){return Object.assign(artRow(r),{Prioridad:r.clase==='A'?'REPONER YA':'PLANIFICAR'});});
-    fname = 'Reposicion_Urgente';
+    rows = D.items
+      .filter(function(r){return r.u6m>0&&(r.clase==='A'||r.clase==='B');})
+      .sort(function(a,b){return b.ing6m-a.ing6m;})
+      .map(function(r){
+        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+          Prom_mensual:+r.prom_men.toFixed(1), Unid_6m:+r.u6m, Ing_6m_USD:+r.ing6m.toFixed(2),
+          Precio_USD:+r.precio.toFixed(2), Stock_Rec_2m:+r.stock_rec,
+          Monto_OC_USD:+r.monto_oc.toFixed(2), Tendencia:r.tend,
+          Dias_Sin_Mov:+r.dias_sin, Prioridad:r.clase==='A'?'REPONER YA':'PLANIFICAR'};
+      });
+    sheetName = 'Reposicion Urgente';
+
   } else if (tipo === 'claseA') {
-    rows = D.items.filter(function(r){return r.clase==='A';}).sort(function(a,b){return b.ing_tot-a.ing_tot;}).map(artRow);
-    fname = 'Clase_A';
+    rows = D.items
+      .filter(function(r){return r.clase==='A';})
+      .sort(function(a,b){return b.ing_tot-a.ing_tot;})
+      .map(artRow);
+    sheetName = 'Clase A';
+
   } else if (tipo === 'planoc') {
-    rows = D.items.filter(function(r){return r.u6m>0;}).sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Prom_mensual:r.prom_men.toFixed(1),Stock_Rec_2m:r.stock_rec,Precio_USD:r.precio.toFixed(2),Monto_OC_USD:r.monto_oc.toFixed(2),Tendencia:r.tend,Prioridad:r.clase==='A'?'ALTA':r.clase==='B'?'MEDIA':'BAJA'};});
-    fname = 'Plan_OC_Completo';
+    rows = D.items
+      .filter(function(r){return r.u6m>0;})
+      .sort(function(a,b){return b.ing6m-a.ing6m;})
+      .map(function(r){
+        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+          Prom_mensual:+r.prom_men.toFixed(1), Unid_6m:+r.u6m,
+          Precio_USD:+r.precio.toFixed(2), Stock_Rec_2m:+r.stock_rec,
+          Monto_OC_USD:+r.monto_oc.toFixed(2), Tendencia:r.tend,
+          Prioridad:r.clase==='A'?'ALTA':r.clase==='B'?'MEDIA':'BAJA'};
+      });
+    sheetName = 'Plan OC Completo';
+
   } else if (tipo === 'abc') {
-    rows = D.items.sort(function(a,b){return b.ing_tot-a.ing_tot;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total_USD:r.ing_tot.toFixed(2),Unid_Total:r.cant_tot,Precio_USD:r.precio.toFixed(2),Dias_Sin_Mov:r.dias_sin};});
-    fname = 'Clasificacion_ABC';
+    rows = D.items
+      .slice().sort(function(a,b){return b.ing_tot-a.ing_tot;})
+      .map(function(r){
+        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+          Ing_Total_USD:+r.ing_tot.toFixed(2), Unid_Total:+r.cant_tot,
+          Precio_USD:+r.precio.toFixed(2), Dias_Sin_Mov:+r.dias_sin};
+      });
+    sheetName = 'Clasificacion ABC';
+
   } else if (tipo === 'stock0') {
-    rows = D.items.filter(function(r){return r.dias_sin>90;}).sort(function(a,b){return b.dias_sin-a.dias_sin;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin_Mov:r.dias_sin,Ing_Historico_USD:r.ing_tot.toFixed(2),Precio_USD:r.precio.toFixed(2),Stock_Rec_2m:r.stock_rec,Monto_OC_USD:r.monto_oc.toFixed(2),Accion:r.accion_sin};});
-    fname = 'Sin_Stock_90d';
+    rows = D.items
+      .filter(function(r){return r.dias_sin>90;})
+      .sort(function(a,b){return b.dias_sin-a.dias_sin;})
+      .map(function(r){
+        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+          Dias_Sin_Mov:+r.dias_sin, Ing_Historico_USD:+r.ing_tot.toFixed(2),
+          Precio_USD:+r.precio.toFixed(2), Stock_Rec_2m:+r.stock_rec,
+          Monto_OC_USD:+r.monto_oc.toFixed(2), Accion:r.accion_sin};
+      });
+    sheetName = 'Sin Stock 90 dias';
+
   } else if (tipo === 'imp') {
-    rows = D.items.filter(function(r){return r.acel_pct>=200;}).sort(function(a,b){return b.acel_pct-a.acel_pct;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Prev_3m:r.up3m,Curr_3m:r.u3m,Crecimiento_pct:r.acel_pct.toFixed(1),Precio_USD:r.precio.toFixed(2),Monto_OC_USD:r.monto_oc.toFixed(2),Prioridad:r.imp_accion};});
-    fname = 'Importar_Urgente';
+    rows = D.items
+      .filter(function(r){return r.acel_pct>=200;})
+      .sort(function(a,b){return b.acel_pct-a.acel_pct;})
+      .map(function(r){
+        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+          Prev_3m:+r.up3m, Curr_3m:+r.u3m, Crecimiento_pct:+r.acel_pct.toFixed(1),
+          Precio_USD:+r.precio.toFixed(2), Monto_OC_USD:+r.monto_oc.toFixed(2),
+          Prioridad:r.imp_accion};
+      });
+    sheetName = 'Importar Urgente';
+
   } else if (tipo === 'creciendo') {
-    rows = D.items.filter(function(r){return r.tend&&r.tend.indexOf('CRECIENDO')>=0;}).sort(function(a,b){return b.ing6m-a.ing6m;}).map(artRow);
-    fname = 'Demanda_Creciendo';
+    rows = D.items
+      .filter(function(r){return r.tend&&r.tend.indexOf('CRECIENDO')>=0;})
+      .sort(function(a,b){return b.ing6m-a.ing6m;})
+      .map(artRow);
+    sheetName = 'Demanda Creciendo';
+
   } else if (tipo === 'bajando') {
-    rows = D.items.filter(function(r){return r.tend&&r.tend.indexOf('BAJANDO')>=0;}).sort(function(a,b){return b.ing_tot-a.ing_tot;}).map(artRow);
-    fname = 'Demanda_Bajando';
+    rows = D.items
+      .filter(function(r){return r.tend&&r.tend.indexOf('BAJANDO')>=0;})
+      .sort(function(a,b){return b.ing_tot-a.ing_tot;})
+      .map(artRow);
+    sheetName = 'Demanda Bajando';
+
   } else if (tipo === 'sin') {
-    rows = D.items.filter(function(r){return r.dias_sin>90;}).sort(function(a,b){return b.dias_sin-a.dias_sin;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin_Mov:r.dias_sin,Ing_Historico_USD:r.ing_tot.toFixed(2),Accion:r.accion_sin};});
-    fname = 'Sin_Movimiento';
+    rows = D.items
+      .filter(function(r){return r.dias_sin>90;})
+      .sort(function(a,b){return b.dias_sin-a.dias_sin;})
+      .map(function(r){
+        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+          Dias_Sin_Mov:+r.dias_sin, Ing_Historico_USD:+r.ing_tot.toFixed(2), Accion:r.accion_sin};
+      });
+    sheetName = 'Sin Movimiento';
+
   } else if (tipo === 'diff' && PREV) {
     var prevMap = {};
     PREV.items.forEach(function(i){prevMap[i.cod]=i;});
     rows = D.items.map(function(r){
       var p = prevMap[r.cod] || {ing_tot:0, clase:'N/A', dias_sin:0};
-      return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Clase_Nueva:r.clase,Clase_Anterior:p.clase||'N/A',Ing_Nuevo:r.ing_tot.toFixed(2),Ing_Anterior:(p.ing_tot||0).toFixed(2),Diferencia_Ing:(r.ing_tot-(p.ing_tot||0)).toFixed(2),Dias_Sin_Nuevo:r.dias_sin,Estado:!p.clase?'NUEVO':r.clase!==p.clase?'CAMBIO CLASE':'SIN CAMBIO'};
+      return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia,
+        Clase_Nueva:r.clase, Clase_Anterior:p.clase||'N/A',
+        Ing_Nuevo:+r.ing_tot.toFixed(2), Ing_Anterior:+(p.ing_tot||0).toFixed(2),
+        Diferencia_Ing:+(r.ing_tot-(p.ing_tot||0)).toFixed(2),
+        Dias_Sin_Nuevo:+r.dias_sin,
+        Estado:!p.clase?'NUEVO':r.clase!==p.clase?'CAMBIO CLASE':'SIN CAMBIO'};
     });
-    fname = 'Comparacion_Anterior_vs_Nuevo';
+    sheetName = 'Comparacion';
+
   } else {
     rows = (artRows.length ? artRows : D.items).map(artRow);
-    fname = 'Articulos';
+    sheetName = 'Articulos';
   }
-  dlCSV(rows, fname);
+
+  if (!rows || !rows.length) { alert('No hay datos para exportar.'); return; }
+  var wb = XLSX.utils.book_new();
+  addFormattedSheet(wb, rows, sheetName, hdrColor);
+  XLSX.writeFile(wb, 'TractorPlan_' + sheetName.replace(/ /g,'_') + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 function dlOneProd(cod) {
   var r = D.items.find(function(i){return i.cod===cod;}); if(!r) return;
-  dlCSV([artRow(r)], 'Ficha_'+r.cod);
+  var wb = XLSX.utils.book_new();
+  addFormattedSheet(wb, [artRow(r)], 'Ficha ' + r.cod, HDR_COLORS['default']);
+  XLSX.writeFile(wb, 'TractorPlan_Ficha_'+r.cod+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 function exportAll() {
   if (!D) { alert('Primero carga datos.'); return; }
   var wb = XLSX.utils.book_new();
-  function add(rows, sheet) { if(rows&&rows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheet); }
-  add(D.items.sort(function(a,b){return b.ing_tot-a.ing_tot;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total_USD:r.ing_tot.toFixed(2),Unid_Total:r.cant_tot,Ing_6m_USD:r.ing6m.toFixed(2),Precio_USD:r.precio.toFixed(2),Tendencia:r.tend,Stock_Rec_2m:r.stock_rec,Monto_OC_USD:r.monto_oc.toFixed(2),Dias_Sin_Mov:r.dias_sin};}), 'ABC Completo');
-  add(D.items.filter(function(r){return r.u6m>0&&(r.clase==='A'||r.clase==='B');}).sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Prom_mensual:r.prom_men.toFixed(1),Stock_Rec_2m:r.stock_rec,Precio_USD:r.precio.toFixed(2),Monto_OC_USD:r.monto_oc.toFixed(2),Tendencia:r.tend,Prioridad:r.clase==='A'?'ALTA':'MEDIA'};}),'Reposicion Urgente');
-  add(D.items.filter(function(r){return r.dias_sin>90;}).sort(function(a,b){return b.dias_sin-a.dias_sin;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin_Mov:r.dias_sin,Ing_Historico_USD:r.ing_tot.toFixed(2),Accion:r.accion_sin};}),'Sin Stock Sin Movimiento');
-  add(D.items.filter(function(r){return r.acel_pct>=200;}).sort(function(a,b){return b.acel_pct-a.acel_pct;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Crecimiento_pct:r.acel_pct.toFixed(1),Curr_3m:r.u3m,Prioridad:r.imp_accion};}),'Importar Urgente');
-  add(D.items.filter(function(r){return r.u6m>0;}).sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,Unid_6m:r.u6m,Prom_mensual:r.prom_men.toFixed(1),Stock_Rec_2m:r.stock_rec,Monto_OC_USD:r.monto_oc.toFixed(2),Tendencia:r.tend};}),'Plan OC');
+
+  addFormattedSheet(wb,
+    D.items.slice().sort(function(a,b){return b.ing_tot-a.ing_tot;}).map(function(r){
+      return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+        Ing_Total_USD:+r.ing_tot.toFixed(2),Unid_Total:+r.cant_tot,
+        Ing_6m_USD:+r.ing6m.toFixed(2),Precio_USD:+r.precio.toFixed(2),
+        Tendencia:r.tend,Stock_Rec_2m:+r.stock_rec,
+        Monto_OC_USD:+r.monto_oc.toFixed(2),Dias_Sin_Mov:+r.dias_sin};
+    }), 'ABC Completo', 'FF1E3A5F');
+
+  addFormattedSheet(wb,
+    D.items.filter(function(r){return r.u6m>0&&(r.clase==='A'||r.clase==='B');})
+      .sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){
+        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+          Prom_mensual:+r.prom_men.toFixed(1),Unid_6m:+r.u6m,
+          Precio_USD:+r.precio.toFixed(2),Stock_Rec_2m:+r.stock_rec,
+          Monto_OC_USD:+r.monto_oc.toFixed(2),Tendencia:r.tend,
+          Prioridad:r.clase==='A'?'ALTA':'MEDIA'};
+      }), 'Reposicion Urgente', 'FF15803D');
+
+  addFormattedSheet(wb,
+    D.items.filter(function(r){return r.dias_sin>90;})
+      .sort(function(a,b){return b.dias_sin-a.dias_sin;}).map(function(r){
+        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+          Dias_Sin_Mov:+r.dias_sin,Ing_Historico_USD:+r.ing_tot.toFixed(2),Accion:r.accion_sin};
+      }), 'Sin Stock Sin Movimiento', 'FF7F1D1D');
+
+  addFormattedSheet(wb,
+    D.items.filter(function(r){return r.acel_pct>=200;})
+      .sort(function(a,b){return b.acel_pct-a.acel_pct;}).map(function(r){
+        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+          Crecimiento_pct:+r.acel_pct.toFixed(1),Curr_3m:+r.u3m,Prioridad:r.imp_accion};
+      }), 'Importar Urgente', 'FF7C2D12');
+
+  addFormattedSheet(wb,
+    D.items.filter(function(r){return r.u6m>0;})
+      .sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){
+        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+          Unid_6m:+r.u6m,Prom_mensual:+r.prom_men.toFixed(1),
+          Stock_Rec_2m:+r.stock_rec,Monto_OC_USD:+r.monto_oc.toFixed(2),Tendencia:r.tend};
+      }), 'Plan OC', 'FF92400E');
+
   XLSX.writeFile(wb, 'TractorPlan_COMPLETO_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
