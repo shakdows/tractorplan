@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TractorPlan — Supply Chain</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;font-size:13px;line-height:1.5;}
+/* NAV */
+.nav{height:54px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;padding:0 24px;gap:4px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.logo{font-weight:800;font-size:16px;color:#d97706;margin-right:16px;letter-spacing:-.5px;white-space:nowrap;}
+.ntab{padding:7px 13px;border-radius:7px;cursor:pointer;font-size:13px;color:#64748b;font-weight:500;border:none;background:none;transition:all .15s;}
+.ntab:hover{background:#f1f5f9;color:#0f172a;}
+.ntab.on{background:#fef3c7;color:#92400e;font-weight:700;}
+.nav-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.stat-pill{font-size:11px;color:#16a34a;font-weight:600;background:#f0fdf4;padding:4px 10px;border-radius:20px;border:1px solid #bbf7d0;}
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.btn-amber{background:#d97706;color:#fff;} .btn-amber:hover{background:#b45309;}
+.btn-green{background:#16a34a;color:#fff;} .btn-green:hover{background:#15803d;}
+.btn-red{background:#dc2626;color:#fff;} .btn-red:hover{background:#b91c1c;}
+.btn-blue{background:#2563eb;color:#fff;} .btn-blue:hover{background:#1d4ed8;}
+.btn-ghost{background:#fff;color:#374151;border:1px solid #e2e8f0;} .btn-ghost:hover{background:#f8fafc;}
+.btn-sm{padding:5px 11px;font-size:11px;}
+/* LAYOUT */
+.content{padding:20px 24px;max-width:1400px;margin:0 auto;}
+.view{display:none;} .view.on{display:block;}
+/* GRIDS */
+.grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px;}
+/* KPI CARD */
+.kpi{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;}
+.kpi-bar{position:absolute;top:0;left:0;bottom:0;width:3px;border-radius:10px 0 0 10px;}
+.kpi-label{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding-left:8px;}
+.kpi-value{font-size:24px;font-weight:800;padding-left:8px;}
+.kpi-sub{font-size:11px;color:#64748b;margin-top:3px;padding-left:8px;}
+/* CARD */
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+/* TABLE */
+.tbl-wrap{overflow:auto;}
+.tbl-wrap.h400{max-height:400px;}
+.tbl-wrap.h520{max-height:520px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:#f8fafc;padding:9px 12px;text-align:left;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:2;cursor:pointer;}
+thead th:hover{background:#f1f5f9;}
+tbody tr{border-bottom:1px solid #f1f5f9;transition:background .1s;}
+tbody tr:hover{background:#f0f9ff;}
+tbody td{padding:9px 12px;white-space:nowrap;}
+tfoot td{padding:9px 12px;font-size:11px;color:#64748b;background:#f8fafc;border-top:1px solid #e2e8f0;}
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap;}
+.bA{background:#dcfce7;color:#15803d;}
+.bB{background:#dbeafe;color:#1d4ed8;}
+.bC{background:#f3f4f6;color:#374151;}
+.bmarca{background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;color:#374151;}
+.bfam{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;}
+.brep{background:#fee2e2;color:#dc2626;}
+.brev{background:#fef3c7;color:#92400e;}
+.bliq{background:#fee2e2;color:#dc2626;}
+.bmon{background:#f3f4f6;color:#64748b;}
+.bimp1{background:#fee2e2;color:#dc2626;}
+.bimp2{background:#fef3c7;color:#92400e;}
+.bimp3{background:#fefce8;color:#854d0e;}
+.bimp4{background:#f0fdf4;color:#15803d;}
+.trend-up{color:#16a34a;font-weight:700;}
+.trend-dn{color:#dc2626;font-weight:700;}
+.trend-st{color:#64748b;}
+/* PROGRESS BAR */
+.pbar{height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:3px;transition:width .4s;}
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.filter-bar h2{font-size:18px;font-weight:800;margin-right:4px;}
+.select-styled{padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:#fff;cursor:pointer;color:#374151;font-family:'Inter',sans-serif;}
+.select-styled:focus{outline:none;border-color:#d97706;}
+.input-styled{padding:7px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;outline:none;font-family:'Inter',sans-serif;}
+.input-styled:focus{border-color:#d97706;}
+.vtabs{display:flex;background:#f1f5f9;border-radius:7px;padding:2px;gap:1px;}
+.vtab{padding:5px 12px;border-radius:5px;font-size:12px;cursor:pointer;color:#64748b;font-weight:500;border:none;background:none;}
+.vtab.on{background:#fff;color:#0f172a;font-weight:700;}
+/* LEGEND */
+.legend{padding:9px 14px;border-radius:8px;margin-bottom:14px;font-size:11px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;border:1px solid;}
+.legend.amber{background:#fffbeb;border-color:#fde68a;color:#78350f;}
+.legend.red{background:#fef2f2;border-color:#fecaca;color:#7f1d1d;}
+.legend.orange{background:#fff7ed;border-color:#fed7aa;color:#7c2d12;}
+.legend.blue{background:#eff6ff;border-color:#bfdbfe;color:#1e3a5f;}
+/* PAGE TITLE */
+.page-title{font-size:18px;font-weight:800;margin-bottom:16px;}
+/* FAM CARD */
+.fam-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.fam-card:hover{transform:translateY(-2px);}
+.fam-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+/* CHART */
+.chart-wrap{position:relative;width:100%;height:220px;}
+canvas{display:block;}
+/* PLAN TABLE */
+.ptbl-wrap{overflow:auto;max-height:220px;background:#fff;border-radius:12px;border:1px solid #e2e8f0;}
+.ptbl{border-collapse:collapse;font-size:12px;min-width:900px;width:100%;}
+.ptbl th{background:#f8fafc;padding:7px 12px;text-align:right;font-size:10.5px;font-weight:700;color:#64748b;border-bottom:1.5px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:2;}
+.ptbl th:first-child{text-align:left;position:sticky;left:0;z-index:3;background:#f8fafc;min-width:160px;}
+.ptbl td{padding:6px 12px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;}
+.ptbl td:first-child{text-align:left;position:sticky;left:0;background:#fff;font-weight:600;z-index:1;color:#374151;}
+.ptbl tr:hover td{background:#fafafa;}
+.fc{background:#fffbeb!important;}
+.pc{background:#f0fdf4!important;}
+/* RIGHT PANEL */
+.rpanel{width:250px;min-width:250px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;}
+.rtabs{display:flex;border-bottom:1px solid #e2e8f0;}
+.rtab{flex:1;padding:10px 4px;text-align:center;cursor:pointer;font-size:11.5px;color:#64748b;border-bottom:2px solid transparent;font-weight:500;border-top:none;border-left:none;border-right:none;background:none;font-family:'Inter',sans-serif;}
+.rtab.on{color:#2563eb;border-bottom-color:#2563eb;font-weight:700;}
+.rcontent{flex:1;overflow-y:auto;padding:12px;}
+.rlabel{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;margin-top:10px;}
+.rselect{width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;background:#f9fafb;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:2px;}
+.kcard{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;}
+.kcard-t{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+.kcard-v{font-size:20px;font-weight:800;}
+.kcard-s{font-size:11px;color:#64748b;margin-top:2px;}
+.rbottom{padding:12px;border-top:1px solid #e2e8f0;background:#f9fafb;}
+.tgl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.tgl-lbl{font-size:12px;color:#374151;}
+.tgl{width:36px;height:20px;background:#e2e8f0;border-radius:10px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.tgl.on{background:#16a34a;}
+.tgl::after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:left .2s;}
+.tgl.on::after{left:19px;}
+/* PLAN LAYOUT */
+.plan-layout{display:flex;gap:16px;margin-top:16px;}
+.plan-chart-area{flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;}
+.chart-tabs{display:flex;border-bottom:1px solid #e2e8f0;padding:0 14px;}
+.ctab{padding:9px 14px;cursor:pointer;font-size:13px;color:#64748b;border-bottom:2px solid transparent;font-weight:500;border-top:none;border-left:none;border-right:none;background:none;font-family:'Inter',sans-serif;}
+.ctab.on{color:#2563eb;border-bottom-color:#2563eb;font-weight:700;}
+.chart-canvas-area{flex:1;padding:12px 14px 6px;}
+.chart-legend{display:flex;gap:16px;padding:6px 14px;border-top:1px solid #f1f5f9;font-size:11px;color:#64748b;flex-wrap:wrap;}
+.ldot{width:20px;height:3px;border-radius:2px;display:inline-block;vertical-align:middle;margin-right:4px;}
+/* ABC visual */
+.abc-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid;}
+.abc-badge{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;}
+/* Upload */
+.upload-zone{border:2px dashed #d97706;border-radius:12px;padding:32px 20px;text-align:center;background:#fffbeb;cursor:pointer;transition:all .2s;}
+.upload-zone:hover{background:#fef3c7;}
+.nodata{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-bottom:2px solid #fde68a;padding:11px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;border-radius:10px;margin-bottom:16px;}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:3px;}
+@media(max-width:1100px){.grid-5{grid-template-columns:repeat(2,1fr);}.grid-2{grid-template-columns:1fr;}.plan-layout{flex-direction:column;}.rpanel{width:100%;}}
+@media(max-width:768px){.ntab span{display:none;}.nav{gap:2px;}}
+</style>
+</head>
+<body>
+
+<!-- FILE INPUT -->
+<input type="file" id="FILE_IN" accept=".csv,.xlsx,.xls,.tsv" style="display:none">
+
+<!-- UPLOAD MODAL -->
+<div id="MODAL" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:440px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:16px;font-weight:800;">📂 Cargar Base de Datos</div>
+      <button id="MODAL_CLOSE" style="background:#f1f5f9;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div class="upload-zone" id="DROPZONE">
+      <div style="font-size:36px;margin-bottom:10px;">📊</div>
+      <div style="font-size:14px;font-weight:700;color:#374151;margin-bottom:6px;">Arrastra tu archivo aquí</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Excel (.xlsx / .xls) o CSV — sin límite de filas</div>
+      <button id="BTN_PICK" class="btn btn-amber" style="font-size:13px;padding:10px 26px;">📁 Seleccionar archivo</button>
+    </div>
+    <div id="UPLOAD_MSG" style="display:none;margin-top:12px;padding:10px;background:#eff6ff;border-radius:8px;font-size:13px;color:#1d4ed8;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="logo">⚙ TractorPlan</div>
+  <button class="ntab on" onclick="showTab('dashboard',this)"><span>📊</span> Dashboard</button>
+  <button class="ntab" onclick="showTab('familias',this)"><span>📂</span> Familias</button>
+  <button class="ntab" onclick="showTab('articulos',this)"><span>📋</span> Artículos</button>
+  <button class="ntab" onclick="showTab('planificacion',this)"><span>📈</span> Planificación</button>
+  <button class="ntab" onclick="showTab('importar',this)"><span>🚢</span> Importar</button>
+  <button class="ntab" onclick="showTab('sinstock',this)"><span>⚠</span> Sin Stock</button>
+  <div class="nav-right">
+    <span class="stat-pill" id="STAT">Sin datos cargados</span>
+    <button class="btn btn-ghost btn-sm" id="BTN_LOAD">📂 Cargar datos</button>
+    <button class="btn btn-green btn-sm" onclick="dlAll()">⬇ Excel Completo</button>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- DASHBOARD -->
+  <div class="view on" id="tab-dashboard">
+    <div id="NODATA" class="nodata">
+      <span style="font-size:24px;">📊</span>
+      <div><div style="font-weight:700;color:#78350f;">Carga tu base de datos para ver el análisis completo</div><div style="font-size:12px;color:#92400e;">Excel (.xlsx) o CSV con tus ventas, movimientos e inventario</div></div>
+      <button class="btn btn-amber btn-sm" style="margin-left:auto;" id="BTN_LOAD2">📂 Cargar datos ahora</button>
+    </div>
+    <div class="grid-5" id="KPI_ROW">
+      <div class="kpi"><div class="kpi-bar" style="background:#d97706;"></div><div class="kpi-label">Ingresos Totales</div><div class="kpi-value" id="k-ing" style="color:#d97706;">—</div><div class="kpi-sub" id="k-ing-s"></div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#2563eb;"></div><div class="kpi-label">Artículos únicos</div><div class="kpi-value" id="k-art" style="color:#2563eb;">—</div><div class="kpi-sub" id="k-art-s"></div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#16a34a;"></div><div class="kpi-label">Clase A (80% ingresos)</div><div class="kpi-value" id="k-a" style="color:#16a34a;">—</div><div class="kpi-sub" id="k-a-s"></div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#dc2626;"></div><div class="kpi-label">Sin Movimiento +90d</div><div class="kpi-value" id="k-sin" style="color:#dc2626;">—</div><div class="kpi-sub">Candidatos liquidar</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#7c3aed;"></div><div class="kpi-label">Importar Urgente</div><div class="kpi-value" id="k-imp" style="color:#7c3aed;">—</div><div class="kpi-sub">Demanda explosiva >200%</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">📊 Ingresos por Familia de Producto <span style="font-size:11px;color:#94a3b8;font-weight:400;">(clic para filtrar)</span></div>
+        <div id="FAM_BARS"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏷 Clasificación ABC del Catálogo</div>
+        <div id="ABC_VIS"></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🏆 Top Artículos por Ingresos (últimos 6m)</div>
+        <div id="TOP_ART"></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0;">📈 Evolución por Familia</div>
+          <select id="FAM_SEL" class="select-styled" onchange="renderFamChart()">
+            <option value="">Seleccionar...</option>
+          </select>
+        </div>
+        <div class="chart-wrap" style="height:140px;"><canvas id="FAM_CHART"></canvas></div>
+        <div id="FAM_BTNS" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAMILIAS -->
+  <div class="view" id="tab-familias">
+    <div class="page-title">📂 Familias de Producto</div>
+    <div class="grid-auto" id="FAM_CARDS"></div>
+  </div>
+
+  <!-- ARTÍCULOS -->
+  <div class="view" id="tab-articulos">
+    <div class="filter-bar">
+      <h2>📋 Artículos</h2>
+      <input type="text" class="input-styled" id="ART_SEARCH" placeholder="Buscar código o familia..." oninput="renderArt()">
+      <select class="select-styled" id="ART_FAM" onchange="renderArt()"><option value="">Todas las familias</option></select>
+      <select class="select-styled" id="ART_MARCA" onchange="renderArt()"><option value="">Todas las marcas</option></select>
+      <div class="vtabs">
+        <button class="vtab on" onclick="setClase('',this)">Todos</button>
+        <button class="vtab" onclick="setClase('A',this)">🅐 A</button>
+        <button class="vtab" onclick="setClase('B',this)">🅑 B</button>
+        <button class="vtab" onclick="setClase('C',this)">🅒 C</button>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="btn btn-blue btn-sm" onclick="dlSection('abc')">⬇ ABC</button>
+        <button class="btn btn-red btn-sm" onclick="dlSection('stock0')">⬇ Stock 0</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('art')">⬇ Vista actual</button>
+      </div>
+    </div>
+    <div class="legend amber">
+      <strong>📖 LEYENDA:</strong>
+      <span><b>Clase A</b> = 80% ingresos — reponer siempre</span>
+      <span><b>↑ CRECIENDO</b> = demanda subiendo vs 3m anteriores</span>
+      <span><b>Stock Rec.</b> = unidades para cubrir 2 meses</span>
+      <span><b>Días sin mov.</b> = días sin ninguna venta</span>
+      <span><b>Monto OC</b> = Stock Rec. × precio promedio</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+      <div class="tbl-wrap h400">
+        <table id="ART_TBL">
+          <thead><tr>
+            <th onclick="sortArt('cod')">Código ↕</th>
+            <th>Familia</th>
+            <th>Marca</th>
+            <th onclick="sortArt('clase')">Clase ↕</th>
+            <th onclick="sortArt('ing_tot')">Ing. Total ↕</th>
+            <th onclick="sortArt('u6m')">Unid. 6m ↕</th>
+            <th onclick="sortArt('ing6m')">Ing. 6m ↕</th>
+            <th onclick="sortArt('precio')">Precio ↕</th>
+            <th onclick="sortArt('tend')">Tendencia ↕</th>
+            <th onclick="sortArt('prom_men')">Prom/mes ↕</th>
+            <th onclick="sortArt('stock_rec')">Stock Rec. ↕</th>
+            <th onclick="sortArt('monto_oc')">Monto OC ↕</th>
+            <th onclick="sortArt('dias_sin')">Días sin mov. ↕</th>
+          </tr></thead>
+          <tbody id="ART_BODY"></tbody>
+        </table>
+      </div>
+      <tfoot><tr><td colspan="13" id="ART_FOOT" style="padding:9px 12px;font-size:11px;color:#64748b;background:#f8fafc;border-top:1px solid #e2e8f0;"></td></tr></tfoot>
+    </div>
+  </div>
+
+  <!-- PLANIFICACIÓN -->
+  <div class="view" id="tab-planificacion">
+    <div class="filter-bar">
+      <h2>📈 Planificación</h2>
+      <div class="vtabs">
+        <button class="vtab on" id="CT_ING" onclick="setChartType('ing',this)">Ingresos</button>
+        <button class="vtab" id="CT_CANT" onclick="setChartType('cant',this)">Cantidad</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="zoom(-1)">−</button>
+      <span id="ZOOM_LBL" style="font-size:12px;color:#64748b;min-width:48px;text-align:center;">24 sem.</span>
+      <button class="btn btn-ghost btn-sm" onclick="zoom(1)">+</button>
+    </div>
+    <div class="ptbl-wrap">
+      <table class="ptbl" id="PLAN_TBL">
+        <thead><tr id="PLAN_HEAD"></tr></thead>
+        <tbody id="PLAN_BODY"></tbody>
+      </table>
+    </div>
+    <div class="plan-layout">
+      <div class="plan-chart-area">
+        <div class="chart-tabs">
+          <button class="ctab on" id="CTA_ING" onclick="setChartType('ing',this)">Ingresos</button>
+          <button class="ctab" id="CTA_CANT" onclick="setChartType('cant',this)">Cantidad</button>
+        </div>
+        <div class="chart-canvas-area"><div class="chart-wrap"><canvas id="MAIN_CHART"></canvas></div></div>
+        <div class="chart-legend">
+          <span><span class="ldot" style="background:#94a3b8;"></span>Ventas reales</span>
+          <span><span class="ldot" style="background:#16a34a;"></span>Inventario proyectado</span>
+          <span><span class="ldot" style="background:#ef4444;"></span>Pronóstico final</span>
+          <span><span class="ldot" style="background:#d97706;"></span>Plan de pedidos</span>
+        </div>
+      </div>
+      <div class="rpanel">
+        <div class="rtabs">
+          <button class="rtab on" onclick="setRTab('kpi',this)">KPIs</button>
+          <button class="rtab" onclick="setRTab('prev',this)">Previsión</button>
+          <button class="rtab" onclick="setRTab('inv',this)">Inventario</button>
+        </div>
+        <div class="rcontent" id="RPANEL_CONTENT"></div>
+        <div class="rbottom">
+          <div class="tgl-row"><span class="tgl-lbl">Ocultar sin movimiento</span><div class="tgl" id="TGL_SIN" onclick="this.classList.toggle('on');renderArt();renderRot();renderImp();renderSin();"></div></div>
+          <div class="tgl-row"><span class="tgl-lbl">Ocultar Clase C</span><div class="tgl" id="TGL_C" onclick="this.classList.toggle('on');renderArt();renderRot();renderImp();renderSin();"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPORTAR -->
+  <div class="view" id="tab-importar">
+    <div class="filter-bar">
+      <h2>🚢 Importar Urgente</h2>
+      <span id="IMP_BADGE" style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;"></span>
+      <select class="select-styled" id="IMP_FAM" onchange="renderImp()"><option value="">Todas las familias</option></select>
+      <select class="select-styled" id="IMP_MARCA" onchange="renderImp()"><option value="">Todas las marcas</option></select>
+      <div style="margin-left:auto;"><button class="btn btn-red btn-sm" onclick="dlSection('imp')">⬇ CSV Importar Urgente</button></div>
+    </div>
+    <div class="legend orange">
+      <strong>📖 LEYENDA:</strong>
+      <span>🔴 <b>IMPORTAR YA</b> = creció +1000% en últimos 3 meses</span>
+      <span>🟠 <b>IMPORTAR PRONTO</b> = creció +500%</span>
+      <span>🟡 <b>AUMENTAR STOCK</b> = creció +200%</span>
+      <span><b>Prev 3m</b> = unidades meses 4-6 atrás | <b>Curr 3m</b> = últimos 3 meses</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+      <div class="tbl-wrap h520">
+        <table><thead><tr>
+          <th>#</th><th>Código</th><th>Familia</th><th>Marca</th><th>Clase</th>
+          <th>Prev 3m</th><th>Curr 3m</th><th>Crecimiento %</th><th>Precio</th><th>Monto OC</th><th>Prioridad</th>
+        </tr></thead><tbody id="IMP_BODY"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIN STOCK -->
+  <div class="view" id="tab-sinstock">
+    <div class="filter-bar">
+      <h2>⚠ Sin Movimiento +90d</h2>
+      <span id="SIN_BADGE" style="background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;"></span>
+      <select class="select-styled" id="SIN_FAM" onchange="renderSin()"><option value="">Todas las familias</option></select>
+      <select class="select-styled" id="SIN_MARCA" onchange="renderSin()"><option value="">Todas las marcas</option></select>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="btn btn-red btn-sm" onclick="dlSection('stock0')">⬇ CSV Stock 0</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('sin')">⬇ CSV Sin Movimiento</button>
+      </div>
+    </div>
+    <div class="grid-5" style="margin-bottom:14px;">
+      <div class="kpi"><div class="kpi-bar" style="background:#dc2626;"></div><div class="kpi-label">Total sin movimiento</div><div class="kpi-value" id="sin-tot" style="color:#dc2626;">—</div><div class="kpi-sub">+90 días parados</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#d97706;"></div><div class="kpi-label">Eran Clase A</div><div class="kpi-value" id="sin-a" style="color:#d97706;">—</div><div class="kpi-sub">Revisar urgente</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#7c3aed;"></div><div class="kpi-label">Candidatos liquidar</div><div class="kpi-value" id="sin-liq" style="color:#7c3aed;">—</div><div class="kpi-sub">+365 días parados</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#64748b;"></div><div class="kpi-label">Valor histórico total</div><div class="kpi-value" id="sin-val" style="color:#64748b;">—</div><div class="kpi-sub">Ingresos históricos</div></div>
+      <div class="kpi"><div class="kpi-bar" style="background:#16a34a;"></div><div class="kpi-label">Monto OC potencial</div><div class="kpi-value" id="sin-oc" style="color:#16a34a;">—</div><div class="kpi-sub">Si se reabastecen</div></div>
+    </div>
+    <div class="legend red">
+      <strong>📖 LEYENDA:</strong>
+      <span>⚠ <b>REVISAR URGENTE</b> = era Clase A, debería tener stock</span>
+      <span><b>REVISAR</b> = tuvo ingresos históricos relevantes</span>
+      <span><b>LIQUIDAR</b> = parado más de 365 días</span>
+      <span><b>MONITOREAR</b> = poca relevancia histórica</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+      <div class="tbl-wrap h520">
+        <table><thead><tr>
+          <th>#</th><th>Código</th><th>Familia</th><th>Marca</th><th>Clase</th>
+          <th>Días sin mov.</th><th>Última venta aprox.</th><th>Ing. histórico</th><th>Precio</th><th>Stock Rec.</th><th>Monto OC</th><th>Acción</th>
+        </tr></thead><tbody id="SIN_BODY"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+const RAW = {"items":[{"cod":"1U8846CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":47339.98,"cant_tot":2921,"precio":15.97,"u6m":590,"ing6m":16448.24,"u3m":323,"up3m":267,"dias_sin":0,"prom_men":98.3,"stock_rec":197,"monto_oc":3147.03,"acel_pct":21.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":44},{"cod":"1358203CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":45034.73,"cant_tot":3845,"precio":12.72,"u6m":1005,"ing6m":17211.9,"u3m":315,"up3m":690,"dias_sin":0,"prom_men":167.5,"stock_rec":335,"monto_oc":4262.14,"acel_pct":-54.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"6E6012CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":44894.02,"cant_tot":9,"precio":4311.68,"u6m":4,"ing6m":32014.06,"u3m":3,"up3m":1,"dias_sin":0,"prom_men":0.7,"stock_rec":2,"monto_oc":8623.36,"acel_pct":200.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"9W8452RCCTP","clase":"A","familia":"Hidráulico","marca":"RCCTP","ing_tot":38266.52,"cant_tot":859,"precio":46.71,"u6m":156,"ing6m":10561.72,"u3m":86,"up3m":70,"dias_sin":0,"prom_men":26.0,"stock_rec":52,"monto_oc":2428.82,"acel_pct":22.9,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"1278216CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":29149.68,"cant_tot":112,"precio":274.01,"u6m":36,"ing6m":13529.68,"u3m":18,"up3m":18,"dias_sin":0,"prom_men":6.0,"stock_rec":12,"monto_oc":3288.07,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":16},{"cod":"4461524CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":27446.75,"cant_tot":663,"precio":39.86,"u6m":126,"ing6m":11168.82,"u3m":93,"up3m":33,"dias_sin":0,"prom_men":21.0,"stock_rec":42,"monto_oc":1673.96,"acel_pct":181.8,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":35},{"cod":"2391497CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":26395.97,"cant_tot":35,"precio":675.61,"u6m":10,"ing6m":11124.47,"u3m":4,"up3m":6,"dias_sin":59,"prom_men":1.7,"stock_rec":4,"monto_oc":2702.45,"acel_pct":-33.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"1407373CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":25387.8,"cant_tot":11,"precio":2358.78,"u6m":2,"ing6m":8493.3,"u3m":1,"up3m":1,"dias_sin":0,"prom_men":0.3,"stock_rec":1,"monto_oc":2358.78,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":10},{"cod":"3383454CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":25128.65,"cant_tot":39,"precio":610.21,"u6m":10,"ing6m":8273.1,"u3m":4,"up3m":6,"dias_sin":59,"prom_men":1.7,"stock_rec":4,"monto_oc":2440.85,"acel_pct":-33.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":24},{"cod":"7N4651CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":24944.68,"cant_tot":54,"precio":431.0,"u6m":16,"ing6m":11416.65,"u3m":10,"up3m":6,"dias_sin":0,"prom_men":2.7,"stock_rec":6,"monto_oc":2585.98,"acel_pct":66.7,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"1117994CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":24813.69,"cant_tot":47,"precio":532.6,"u6m":13,"ing6m":10039.64,"u3m":8,"up3m":5,"dias_sin":0,"prom_men":2.2,"stock_rec":5,"monto_oc":2663.01,"acel_pct":60.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"1634061CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":24499.39,"cant_tot":23,"precio":770.09,"u6m":7,"ing6m":14019.39,"u3m":7,"up3m":0,"dias_sin":59,"prom_men":1.2,"stock_rec":3,"monto_oc":2310.26,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":9},{"cod":"1441358CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":23896.99,"cant_tot":595,"precio":40.35,"u6m":94,"ing6m":5637.0,"u3m":32,"up3m":62,"dias_sin":31,"prom_men":15.7,"stock_rec":32,"monto_oc":1291.15,"acel_pct":-48.4,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"3P7958CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":23600.28,"cant_tot":43,"precio":678.91,"u6m":15,"ing6m":8101.83,"u3m":2,"up3m":13,"dias_sin":31,"prom_men":2.5,"stock_rec":5,"monto_oc":3394.54,"acel_pct":-84.6,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":19},{"cod":"1188605CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":22724.47,"cant_tot":28,"precio":771.54,"u6m":4,"ing6m":5679.2,"u3m":2,"up3m":2,"dias_sin":31,"prom_men":0.7,"stock_rec":2,"monto_oc":1543.09,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":19},{"cod":"6E6477CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":22419.06,"cant_tot":26,"precio":829.5,"u6m":4,"ing6m":6748.04,"u3m":2,"up3m":2,"dias_sin":31,"prom_men":0.7,"stock_rec":2,"monto_oc":1659.0,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":18},{"cod":"8R3932CTP","clase":"A","familia":"Repuestos Motor","marca":"CTP","ing_tot":22304.95,"cant_tot":169,"precio":105.91,"u6m":39,"ing6m":11482.71,"u3m":33,"up3m":6,"dias_sin":31,"prom_men":6.5,"stock_rec":13,"monto_oc":1376.78,"acel_pct":450.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":22},{"cod":"8N7005CTP","clase":"A","familia":"Sellos y Juntas","marca":"CTP","ing_tot":22289.55,"cant_tot":285,"precio":91.2,"u6m":50,"ing6m":3422.55,"u3m":5,"up3m":45,"dias_sin":31,"prom_men":8.3,"stock_rec":17,"monto_oc":1550.42,"acel_pct":-88.9,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":29},{"cod":"2382720PKCTP","clase":"A","familia":"Repuestos Estructura","marca":"PKCTP","ing_tot":22245.24,"cant_tot":91,"precio":245.55,"u6m":12,"ing6m":2864.0,"u3m":0,"up3m":12,"dias_sin":182,"prom_men":2.0,"stock_rec":4,"monto_oc":982.2,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"1590464CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":21808.27,"cant_tot":335,"precio":64.4,"u6m":89,"ing6m":8029.53,"u3m":32,"up3m":57,"dias_sin":0,"prom_men":14.8,"stock_rec":30,"monto_oc":1932.07,"acel_pct":-43.9,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":30},{"cod":"2507700CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":21407.4,"cant_tot":21,"precio":1003.36,"u6m":7,"ing6m":10439.4,"u3m":3,"up3m":4,"dias_sin":31,"prom_men":1.2,"stock_rec":3,"monto_oc":3010.08,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"1844395CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":20806.57,"cant_tot":549,"precio":39.57,"u6m":32,"ing6m":2440.55,"u3m":16,"up3m":16,"dias_sin":0,"prom_men":5.3,"stock_rec":11,"monto_oc":435.25,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":25},{"cod":"2071560CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":20668.05,"cant_tot":45,"precio":474.45,"u6m":7,"ing6m":3912.75,"u3m":2,"up3m":5,"dias_sin":59,"prom_men":1.2,"stock_rec":3,"monto_oc":1423.35,"acel_pct":-60.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":27},{"cod":"7N7748CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":20512.72,"cant_tot":46,"precio":471.97,"u6m":4,"ing6m":3051.35,"u3m":2,"up3m":2,"dias_sin":0,"prom_men":0.7,"stock_rec":2,"monto_oc":943.94,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":28},{"cod":"2085235CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":20448.06,"cant_tot":3092,"precio":7.4,"u6m":501,"ing6m":5063.65,"u3m":183,"up3m":318,"dias_sin":0,"prom_men":83.5,"stock_rec":167,"monto_oc":1235.76,"acel_pct":-42.5,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":40},{"cod":"1359300CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":19745.48,"cant_tot":630,"precio":33.19,"u6m":139,"ing6m":7177.52,"u3m":71,"up3m":68,"dias_sin":0,"prom_men":23.2,"stock_rec":47,"monto_oc":1560.07,"acel_pct":4.4,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"2500841CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":19518.28,"cant_tot":20,"precio":1005.43,"u6m":4,"ing6m":5072.79,"u3m":1,"up3m":3,"dias_sin":31,"prom_men":0.7,"stock_rec":2,"monto_oc":2010.86,"acel_pct":-66.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"3741605CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":19338.42,"cant_tot":7,"precio":2339.84,"u6m":2,"ing6m":8973.1,"u3m":1,"up3m":1,"dias_sin":0,"prom_men":0.3,"stock_rec":1,"monto_oc":2339.84,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":10},{"cod":"6E2387CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":19271.72,"cant_tot":35,"precio":546.45,"u6m":2,"ing6m":1051.0,"u3m":0,"up3m":2,"dias_sin":151,"prom_men":0.3,"stock_rec":1,"monto_oc":546.45,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"7T8001CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":19049.93,"cant_tot":8,"precio":2381.24,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":243,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"9G8638CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":19028.9,"cant_tot":35,"precio":462.26,"u6m":12,"ing6m":10436.4,"u3m":12,"up3m":0,"dias_sin":31,"prom_men":2.0,"stock_rec":4,"monto_oc":1849.03,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":11},{"cod":"9W2452CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":19001.02,"cant_tot":277,"precio":61.88,"u6m":50,"ing6m":5881.41,"u3m":28,"up3m":22,"dias_sin":59,"prom_men":8.3,"stock_rec":17,"monto_oc":1051.97,"acel_pct":27.3,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":35},{"cod":"8N3182LKCTP","clase":"A","familia":"Sellos y Juntas","marca":"LKCTP","ing_tot":18836.66,"cant_tot":142,"precio":133.06,"u6m":24,"ing6m":4682.54,"u3m":12,"up3m":12,"dias_sin":0,"prom_men":4.0,"stock_rec":8,"monto_oc":1064.47,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":23},{"cod":"6I1346CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":18757.63,"cant_tot":126,"precio":169.7,"u6m":30,"ing6m":4299.14,"u3m":7,"up3m":23,"dias_sin":0,"prom_men":5.0,"stock_rec":10,"monto_oc":1697.05,"acel_pct":-69.6,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"3348389CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":18257.73,"cant_tot":9,"precio":2028.64,"u6m":3,"ing6m":8747.73,"u3m":2,"up3m":1,"dias_sin":31,"prom_men":0.5,"stock_rec":1,"monto_oc":2028.64,"acel_pct":100.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":9},{"cod":"9P9361CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":18257.5,"cant_tot":13,"precio":1393.08,"u6m":1,"ing6m":1500.0,"u3m":1,"up3m":0,"dias_sin":90,"prom_men":0.2,"stock_rec":1,"monto_oc":1393.08,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"9P9363CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":17738.82,"cant_tot":47,"precio":381.32,"u6m":5,"ing6m":2612.48,"u3m":3,"up3m":2,"dias_sin":59,"prom_men":0.8,"stock_rec":2,"monto_oc":762.65,"acel_pct":50.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":27},{"cod":"5P5066CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":17733.34,"cant_tot":83,"precio":221.67,"u6m":12,"ing6m":3579.05,"u3m":2,"up3m":10,"dias_sin":31,"prom_men":2.0,"stock_rec":4,"monto_oc":886.69,"acel_pct":-80.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"7E9595CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":17682.48,"cant_tot":24,"precio":722.99,"u6m":6,"ing6m":8322.48,"u3m":4,"up3m":2,"dias_sin":31,"prom_men":1.0,"stock_rec":2,"monto_oc":1445.97,"acel_pct":100.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":6},{"cod":"8K6042CTP","clase":"A","familia":"Repuestos Motor","marca":"CTP","ing_tot":17600.59,"cant_tot":278,"precio":49.13,"u6m":102,"ing6m":10632.67,"u3m":80,"up3m":22,"dias_sin":0,"prom_men":17.0,"stock_rec":34,"monto_oc":1670.34,"acel_pct":263.6,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"5S6531CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":17420.13,"cant_tot":57,"precio":291.83,"u6m":10,"ing6m":6027.21,"u3m":6,"up3m":4,"dias_sin":0,"prom_men":1.7,"stock_rec":4,"monto_oc":1167.33,"acel_pct":50.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"7N8021CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":17230.2,"cant_tot":42,"precio":362.6,"u6m":12,"ing6m":8617.6,"u3m":7,"up3m":5,"dias_sin":31,"prom_men":2.0,"stock_rec":4,"monto_oc":1450.38,"acel_pct":40.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":25},{"cod":"3715941CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":17064.62,"cant_tot":303,"precio":61.16,"u6m":64,"ing6m":4240.84,"u3m":17,"up3m":47,"dias_sin":31,"prom_men":10.7,"stock_rec":22,"monto_oc":1345.57,"acel_pct":-63.8,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":28},{"cod":"3P6816CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":16901.73,"cant_tot":52,"precio":306.29,"u6m":13,"ing6m":5574.1,"u3m":3,"up3m":10,"dias_sin":59,"prom_men":2.2,"stock_rec":5,"monto_oc":1531.45,"acel_pct":-70.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":29},{"cod":"3G7654CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":16814.06,"cant_tot":65,"precio":275.43,"u6m":9,"ing6m":3802.75,"u3m":7,"up3m":2,"dias_sin":0,"prom_men":1.5,"stock_rec":3,"monto_oc":826.28,"acel_pct":250.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"1N4304CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":16509.66,"cant_tot":13,"precio":1269.97,"u6m":1,"ing6m":3954.85,"u3m":1,"up3m":0,"dias_sin":0,"prom_men":0.2,"stock_rec":1,"monto_oc":1269.97,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"1979322CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":15798.09,"cant_tot":216,"precio":70.31,"u6m":24,"ing6m":3736.18,"u3m":12,"up3m":12,"dias_sin":0,"prom_men":4.0,"stock_rec":8,"monto_oc":562.5,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"6Y0359CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":15556.02,"cant_tot":430,"precio":41.22,"u6m":78,"ing6m":4364.69,"u3m":30,"up3m":48,"dias_sin":0,"prom_men":13.0,"stock_rec":26,"monto_oc":1071.71,"acel_pct":-37.5,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"9W6674CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":15251.23,"cant_tot":280,"precio":55.27,"u6m":69,"ing6m":5364.83,"u3m":32,"up3m":37,"dias_sin":0,"prom_men":11.5,"stock_rec":23,"monto_oc":1271.14,"acel_pct":-13.5,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":37},{"cod":"8N6796CTP","clase":"A","familia":"Sellos y Juntas","marca":"CTP","ing_tot":14885.25,"cant_tot":15,"precio":998.92,"u6m":1,"ing6m":875.0,"u3m":0,"up3m":1,"dias_sin":182,"prom_men":0.2,"stock_rec":1,"monto_oc":998.92,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":14},{"cod":"1654262LKCTP","clase":"A","familia":"Filtros y Lubricación","marca":"LKCTP","ing_tot":14740.0,"cant_tot":114,"precio":129.36,"u6m":18,"ing6m":2430.0,"u3m":0,"up3m":18,"dias_sin":151,"prom_men":3.0,"stock_rec":6,"monto_oc":776.16,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"1093622CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":14582.16,"cant_tot":27,"precio":687.36,"u6m":3,"ing6m":2520.91,"u3m":1,"up3m":2,"dias_sin":59,"prom_men":0.5,"stock_rec":1,"monto_oc":687.36,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"6Y5352CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":14503.56,"cant_tot":630,"precio":28.98,"u6m":192,"ing6m":5093.16,"u3m":60,"up3m":132,"dias_sin":0,"prom_men":32.0,"stock_rec":64,"monto_oc":1854.72,"acel_pct":-54.5,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"7T8555CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":14451.0,"cant_tot":62,"precio":228.35,"u6m":3,"ing6m":672.0,"u3m":0,"up3m":3,"dias_sin":182,"prom_men":0.5,"stock_rec":1,"monto_oc":228.35,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"5T0735CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":14115.75,"cant_tot":45,"precio":312.33,"u6m":8,"ing6m":2386.5,"u3m":0,"up3m":8,"dias_sin":151,"prom_men":1.3,"stock_rec":3,"monto_oc":936.98,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":19},{"cod":"6G1633CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":14004.18,"cant_tot":39,"precio":326.38,"u6m":6,"ing6m":2100.68,"u3m":0,"up3m":6,"dias_sin":151,"prom_men":1.0,"stock_rec":2,"monto_oc":652.76,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"2V7153CTP","clase":"A","familia":"Refrigeración","marca":"CTP","ing_tot":13960.64,"cant_tot":170,"precio":87.21,"u6m":40,"ing6m":5073.27,"u3m":20,"up3m":20,"dias_sin":0,"prom_men":6.7,"stock_rec":14,"monto_oc":1220.95,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":23},{"cod":"1981845CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":13802.46,"cant_tot":19,"precio":770.64,"u6m":6,"ing6m":6541.46,"u3m":5,"up3m":1,"dias_sin":0,"prom_men":1.0,"stock_rec":2,"monto_oc":1541.28,"acel_pct":400.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":14},{"cod":"1S5331CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":13679.4,"cant_tot":79,"precio":184.45,"u6m":15,"ing6m":4254.16,"u3m":7,"up3m":8,"dias_sin":0,"prom_men":2.5,"stock_rec":5,"monto_oc":922.24,"acel_pct":-12.5,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"1U4103CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":13320.72,"cant_tot":39,"precio":314.19,"u6m":7,"ing6m":5746.72,"u3m":7,"up3m":0,"dias_sin":0,"prom_men":1.2,"stock_rec":3,"monto_oc":942.58,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"9P7390CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":13312.73,"cant_tot":346,"precio":39.41,"u6m":60,"ing6m":2517.68,"u3m":16,"up3m":44,"dias_sin":0,"prom_men":10.0,"stock_rec":20,"monto_oc":788.15,"acel_pct":-63.6,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":30},{"cod":"1898777CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":13309.58,"cant_tot":67,"precio":198.8,"u6m":9,"ing6m":1630.0,"u3m":0,"up3m":9,"dias_sin":121,"prom_men":1.5,"stock_rec":3,"monto_oc":596.4,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":29},{"cod":"9N4353CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":13126.88,"cant_tot":300,"precio":38.97,"u6m":64,"ing6m":4878.08,"u3m":40,"up3m":24,"dias_sin":0,"prom_men":10.7,"stock_rec":22,"monto_oc":857.43,"acel_pct":66.7,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"4461527CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":13089.99,"cant_tot":163,"precio":86.27,"u6m":33,"ing6m":3657.48,"u3m":11,"up3m":22,"dias_sin":0,"prom_men":5.5,"stock_rec":11,"monto_oc":948.98,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":35},{"cod":"1473309CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":12852.4,"cant_tot":13,"precio":1003.75,"u6m":3,"ing6m":3680.0,"u3m":1,"up3m":2,"dias_sin":90,"prom_men":0.5,"stock_rec":1,"monto_oc":1003.75,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":11},{"cod":"1U3352RCCTP","clase":"A","familia":"Filtros","marca":"RCCTP","ing_tot":12827.58,"cant_tot":607,"precio":23.22,"u6m":37,"ing6m":1165.52,"u3m":19,"up3m":18,"dias_sin":59,"prom_men":6.2,"stock_rec":13,"monto_oc":301.83,"acel_pct":5.6,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":27},{"cod":"4461526CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":12735.52,"cant_tot":252,"precio":54.64,"u6m":44,"ing6m":2975.12,"u3m":23,"up3m":21,"dias_sin":0,"prom_men":7.3,"stock_rec":15,"monto_oc":819.62,"acel_pct":9.5,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"4C4782CTP","clase":"A","familia":"Chasis y Estructura","marca":"CTP","ing_tot":12665.21,"cant_tot":133,"precio":98.7,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":212,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"3G4768CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":12621.88,"cant_tot":29,"precio":443.97,"u6m":4,"ing6m":2414.95,"u3m":1,"up3m":3,"dias_sin":0,"prom_men":0.7,"stock_rec":2,"monto_oc":887.95,"acel_pct":-66.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"1799579CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":12496.14,"cant_tot":41,"precio":323.38,"u6m":9,"ing6m":4257.09,"u3m":6,"up3m":3,"dias_sin":0,"prom_men":1.5,"stock_rec":3,"monto_oc":970.15,"acel_pct":100.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":23},{"cod":"2676798CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":12493.08,"cant_tot":5,"precio":2291.68,"u6m":2,"ing6m":8722.08,"u3m":2,"up3m":0,"dias_sin":59,"prom_men":0.3,"stock_rec":1,"monto_oc":2291.68,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":3},{"cod":"3500666CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":12245.47,"cant_tot":8,"precio":1527.92,"u6m":1,"ing6m":1310.47,"u3m":0,"up3m":1,"dias_sin":151,"prom_men":0.2,"stock_rec":1,"monto_oc":1527.92,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"1912676CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":11999.23,"cant_tot":8,"precio":1550.96,"u6m":2,"ing6m":4984.23,"u3m":1,"up3m":1,"dias_sin":31,"prom_men":0.3,"stock_rec":1,"monto_oc":1550.96,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"3780509LKCTP","clase":"A","familia":"Componentes Motor","marca":"LKCTP","ing_tot":11995.17,"cant_tot":42,"precio":285.6,"u6m":12,"ing6m":6770.67,"u3m":12,"up3m":0,"dias_sin":31,"prom_men":2.0,"stock_rec":4,"monto_oc":1142.4,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"3161079CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":11906.3,"cant_tot":7,"precio":1700.9,"u6m":1,"ing6m":1890.0,"u3m":0,"up3m":1,"dias_sin":182,"prom_men":0.2,"stock_rec":1,"monto_oc":1700.9,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"7C3039CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":11790.65,"cant_tot":17,"precio":646.13,"u6m":4,"ing6m":4984.15,"u3m":2,"up3m":2,"dias_sin":59,"prom_men":0.7,"stock_rec":2,"monto_oc":1292.26,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":12},{"cod":"3G7653CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":11729.89,"cant_tot":42,"precio":260.35,"u6m":9,"ing6m":4746.31,"u3m":5,"up3m":4,"dias_sin":31,"prom_men":1.5,"stock_rec":3,"monto_oc":781.06,"acel_pct":25.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":23},{"cod":"6E4006CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":11715.94,"cant_tot":20,"precio":581.26,"u6m":7,"ing6m":5137.9,"u3m":3,"up3m":4,"dias_sin":0,"prom_men":1.2,"stock_rec":3,"monto_oc":1743.78,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"2099886CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":11678.19,"cant_tot":127,"precio":88.12,"u6m":31,"ing6m":4995.25,"u3m":18,"up3m":13,"dias_sin":0,"prom_men":5.2,"stock_rec":11,"monto_oc":969.29,"acel_pct":38.5,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"1637280CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":11629.18,"cant_tot":47,"precio":214.93,"u6m":17,"ing6m":6625.69,"u3m":9,"up3m":8,"dias_sin":0,"prom_men":2.8,"stock_rec":6,"monto_oc":1289.55,"acel_pct":12.5,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":28},{"cod":"2338552CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":11607.6,"cant_tot":26,"precio":453.28,"u6m":5,"ing6m":3277.5,"u3m":1,"up3m":4,"dias_sin":59,"prom_men":0.8,"stock_rec":2,"monto_oc":906.55,"acel_pct":-75.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":22},{"cod":"3050325CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":11587.0,"cant_tot":29,"precio":369.06,"u6m":7,"ing6m":4119.28,"u3m":4,"up3m":3,"dias_sin":59,"prom_men":1.2,"stock_rec":3,"monto_oc":1107.19,"acel_pct":33.3,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":22},{"cod":"7W5615CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":11517.07,"cant_tot":106,"precio":119.16,"u6m":20,"ing6m":2611.77,"u3m":5,"up3m":15,"dias_sin":0,"prom_men":3.3,"stock_rec":7,"monto_oc":834.12,"acel_pct":-66.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":37},{"cod":"2P1784CTP","clase":"A","familia":"Refrigeración","marca":"CTP","ing_tot":11341.04,"cant_tot":40,"precio":285.61,"u6m":11,"ing6m":4628.88,"u3m":4,"up3m":7,"dias_sin":0,"prom_men":1.8,"stock_rec":4,"monto_oc":1142.46,"acel_pct":-42.9,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":24},{"cod":"8R4568CTP","clase":"A","familia":"Repuestos Motor","marca":"CTP","ing_tot":11302.54,"cant_tot":82,"precio":145.23,"u6m":16,"ing6m":2908.35,"u3m":7,"up3m":9,"dias_sin":31,"prom_men":2.7,"stock_rec":6,"monto_oc":871.39,"acel_pct":-22.2,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"4T4307CTP","clase":"A","familia":"Chasis y Estructura","marca":"CTP","ing_tot":11255.06,"cant_tot":257,"precio":47.46,"u6m":44,"ing6m":3529.82,"u3m":24,"up3m":20,"dias_sin":0,"prom_men":7.3,"stock_rec":15,"monto_oc":711.84,"acel_pct":20.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":27},{"cod":"6Y0309CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":11252.48,"cant_tot":704,"precio":18.64,"u6m":57,"ing6m":1494.73,"u3m":28,"up3m":29,"dias_sin":0,"prom_men":9.5,"stock_rec":19,"monto_oc":354.19,"acel_pct":-3.4,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"9G5315CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":11236.37,"cant_tot":197,"precio":54.6,"u6m":54,"ing6m":5261.6,"u3m":28,"up3m":26,"dias_sin":0,"prom_men":9.0,"stock_rec":18,"monto_oc":982.84,"acel_pct":7.7,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"1311651CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":11209.0,"cant_tot":337,"precio":33.97,"u6m":61,"ing6m":2268.15,"u3m":4,"up3m":57,"dias_sin":90,"prom_men":10.2,"stock_rec":21,"monto_oc":713.33,"acel_pct":-93.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"2992212CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":11204.99,"cant_tot":32,"precio":352.83,"u6m":9,"ing6m":5009.49,"u3m":8,"up3m":1,"dias_sin":0,"prom_men":1.5,"stock_rec":3,"monto_oc":1058.5,"acel_pct":700.0,"tend":"↑ CRECIENDO","imp_accion":"🟠 IMPORTAR PRONTO","accion_sin":"REVISAR URGENTE","n_trans":19},{"cod":"2235111CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":11121.0,"cant_tot":18,"precio":621.75,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":730,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":4},{"cod":"2004497CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":11095.96,"cant_tot":44,"precio":276.61,"u6m":11,"ing6m":3203.96,"u3m":4,"up3m":7,"dias_sin":0,"prom_men":1.8,"stock_rec":4,"monto_oc":1106.45,"acel_pct":-42.9,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":20},{"cod":"4649988CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":11071.12,"cant_tot":23,"precio":489.28,"u6m":4,"ing6m":2544.57,"u3m":2,"up3m":2,"dias_sin":59,"prom_men":0.7,"stock_rec":2,"monto_oc":978.56,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":18},{"cod":"8R3937CTP","clase":"A","familia":"Repuestos Motor","marca":"CTP","ing_tot":11031.78,"cant_tot":164,"precio":68.3,"u6m":43,"ing6m":3836.78,"u3m":20,"up3m":23,"dias_sin":31,"prom_men":7.2,"stock_rec":15,"monto_oc":1024.54,"acel_pct":-13.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":25},{"cod":"8R3946CTP","clase":"A","familia":"Repuestos Motor","marca":"CTP","ing_tot":11022.83,"cant_tot":237,"precio":51.17,"u6m":58,"ing6m":3255.84,"u3m":26,"up3m":32,"dias_sin":0,"prom_men":9.7,"stock_rec":20,"monto_oc":1023.33,"acel_pct":-18.8,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":29},{"cod":"8F3170CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":11008.29,"cant_tot":108,"precio":97.85,"u6m":15,"ing6m":2715.81,"u3m":9,"up3m":6,"dias_sin":31,"prom_men":2.5,"stock_rec":5,"monto_oc":489.25,"acel_pct":50.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"9R7710CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":10996.42,"cant_tot":6,"precio":1832.74,"u6m":1,"ing6m":4428.92,"u3m":1,"up3m":0,"dias_sin":59,"prom_men":0.2,"stock_rec":1,"monto_oc":1832.74,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":6},{"cod":"3874365CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":10960.0,"cant_tot":18,"precio":609.0,"u6m":6,"ing6m":3690.0,"u3m":0,"up3m":6,"dias_sin":151,"prom_men":1.0,"stock_rec":2,"monto_oc":1218.0,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":5},{"cod":"7N0165CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":10888.09,"cant_tot":68,"precio":167.5,"u6m":16,"ing6m":3631.58,"u3m":8,"up3m":8,"dias_sin":31,"prom_men":2.7,"stock_rec":6,"monto_oc":1005.02,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":30},{"cod":"8E7532CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":10871.32,"cant_tot":11,"precio":1027.13,"u6m":2,"ing6m":4420.0,"u3m":2,"up3m":0,"dias_sin":0,"prom_men":0.3,"stock_rec":1,"monto_oc":1027.13,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":10},{"cod":"1T1993CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":10862.0,"cant_tot":39,"precio":290.35,"u6m":6,"ing6m":2995.03,"u3m":3,"up3m":3,"dias_sin":31,"prom_men":1.0,"stock_rec":2,"monto_oc":580.71,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":30},{"cod":"1941245CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":10791.24,"cant_tot":62,"precio":162.68,"u6m":14,"ing6m":3186.98,"u3m":6,"up3m":8,"dias_sin":0,"prom_men":2.3,"stock_rec":5,"monto_oc":813.42,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"1V8953CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":10683.19,"cant_tot":89,"precio":124.26,"u6m":18,"ing6m":2359.59,"u3m":8,"up3m":10,"dias_sin":0,"prom_men":3.0,"stock_rec":6,"monto_oc":745.58,"acel_pct":-20.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":22},{"cod":"5M6637CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":10659.45,"cant_tot":220,"precio":48.33,"u6m":40,"ing6m":3228.43,"u3m":22,"up3m":18,"dias_sin":0,"prom_men":6.7,"stock_rec":14,"monto_oc":676.57,"acel_pct":22.2,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":43},{"cod":"3323619CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":10563.25,"cant_tot":2,"precio":5281.62,"u6m":2,"ing6m":10563.25,"u3m":1,"up3m":1,"dias_sin":0,"prom_men":0.3,"stock_rec":1,"monto_oc":5281.62,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":2},{"cod":"2221091CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":10354.1,"cant_tot":289,"precio":41.92,"u6m":24,"ing6m":1386.38,"u3m":8,"up3m":16,"dias_sin":59,"prom_men":4.0,"stock_rec":8,"monto_oc":335.37,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":18},{"cod":"2280417CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":10313.76,"cant_tot":221,"precio":45.66,"u6m":56,"ing6m":4286.51,"u3m":32,"up3m":24,"dias_sin":0,"prom_men":9.3,"stock_rec":19,"monto_oc":867.44,"acel_pct":33.3,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"1409698CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":10250.0,"cant_tot":3,"precio":3416.67,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":396,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":3},{"cod":"2285619CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":10249.11,"cant_tot":145,"precio":71.68,"u6m":25,"ing6m":1585.86,"u3m":2,"up3m":23,"dias_sin":90,"prom_men":4.2,"stock_rec":9,"monto_oc":645.09,"acel_pct":-91.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"5280585CTP","clase":"A","familia":"Piezas Eléctricas","marca":"CTP","ing_tot":10236.0,"cant_tot":166,"precio":56.97,"u6m":106,"ing6m":7276.0,"u3m":66,"up3m":40,"dias_sin":0,"prom_men":17.7,"stock_rec":36,"monto_oc":2050.77,"acel_pct":65.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":22},{"cod":"2966220CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":10230.45,"cant_tot":33,"precio":322.52,"u6m":7,"ing6m":3095.39,"u3m":3,"up3m":4,"dias_sin":0,"prom_men":1.2,"stock_rec":3,"monto_oc":967.57,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":16},{"cod":"6Y5230CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":10199.43,"cant_tot":2024,"precio":5.73,"u6m":174,"ing6m":1067.12,"u3m":46,"up3m":128,"dias_sin":0,"prom_men":29.0,"stock_rec":58,"monto_oc":332.34,"acel_pct":-64.1,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":28},{"cod":"1P1216CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":10190.58,"cant_tot":41,"precio":223.29,"u6m":13,"ing6m":5665.08,"u3m":10,"up3m":3,"dias_sin":0,"prom_men":2.2,"stock_rec":5,"monto_oc":1116.47,"acel_pct":233.3,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"1386552CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":10182.21,"cant_tot":95,"precio":108.06,"u6m":17,"ing6m":2463.21,"u3m":4,"up3m":13,"dias_sin":31,"prom_men":2.8,"stock_rec":6,"monto_oc":648.39,"acel_pct":-69.2,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":22},{"cod":"1386451CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":10162.86,"cant_tot":135,"precio":75.54,"u6m":24,"ing6m":2520.03,"u3m":12,"up3m":12,"dias_sin":0,"prom_men":4.0,"stock_rec":8,"monto_oc":604.34,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"1629248CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":10085.05,"cant_tot":27,"precio":389.61,"u6m":5,"ing6m":2431.95,"u3m":1,"up3m":4,"dias_sin":0,"prom_men":0.8,"stock_rec":2,"monto_oc":779.22,"acel_pct":-75.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"2862114CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":9960.91,"cant_tot":164,"precio":63.92,"u6m":24,"ing6m":2215.91,"u3m":9,"up3m":15,"dias_sin":31,"prom_men":4.0,"stock_rec":8,"monto_oc":511.35,"acel_pct":-40.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":30},{"cod":"1U3953CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":9949.81,"cant_tot":40,"precio":247.65,"u6m":4,"ing6m":840.0,"u3m":0,"up3m":4,"dias_sin":121,"prom_men":0.7,"stock_rec":2,"monto_oc":495.3,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":24},{"cod":"2525165CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":9926.3,"cant_tot":10,"precio":976.18,"u6m":2,"ing6m":1790.0,"u3m":0,"up3m":2,"dias_sin":151,"prom_men":0.3,"stock_rec":1,"monto_oc":976.18,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":9},{"cod":"1U3302PTCTP","clase":"A","familia":"Filtros","marca":"PTCTP","ing_tot":9912.61,"cant_tot":377,"precio":24.7,"u6m":48,"ing6m":2524.44,"u3m":24,"up3m":24,"dias_sin":59,"prom_men":8.0,"stock_rec":16,"monto_oc":395.26,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":28},{"cod":"7N7998CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":9795.07,"cant_tot":28,"precio":378.89,"u6m":7,"ing6m":3664.06,"u3m":1,"up3m":6,"dias_sin":31,"prom_men":1.2,"stock_rec":3,"monto_oc":1136.67,"acel_pct":-83.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":16},{"cod":"2209091CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":9773.78,"cant_tot":356,"precio":27.88,"u6m":72,"ing6m":2251.16,"u3m":20,"up3m":52,"dias_sin":59,"prom_men":12.0,"stock_rec":24,"monto_oc":669.22,"acel_pct":-61.5,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":27},{"cod":"4229841CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":9766.2,"cant_tot":30,"precio":366.68,"u6m":6,"ing6m":3020.96,"u3m":2,"up3m":4,"dias_sin":31,"prom_men":1.0,"stock_rec":2,"monto_oc":733.35,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"1727766CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":9739.98,"cant_tot":40,"precio":261.05,"u6m":9,"ing6m":2856.48,"u3m":2,"up3m":7,"dias_sin":0,"prom_men":1.5,"stock_rec":3,"monto_oc":783.16,"acel_pct":-71.4,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"2490313CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":9598.27,"cant_tot":8,"precio":1199.78,"u6m":1,"ing6m":3168.27,"u3m":1,"up3m":0,"dias_sin":31,"prom_men":0.2,"stock_rec":1,"monto_oc":1199.78,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"6I6354CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":9450.41,"cant_tot":312,"precio":32.77,"u6m":59,"ing6m":2434.29,"u3m":34,"up3m":25,"dias_sin":0,"prom_men":9.8,"stock_rec":20,"monto_oc":655.33,"acel_pct":36.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":29},{"cod":"4854895CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":9435.34,"cant_tot":69,"precio":150.81,"u6m":11,"ing6m":2153.95,"u3m":6,"up3m":5,"dias_sin":0,"prom_men":1.8,"stock_rec":4,"monto_oc":603.26,"acel_pct":20.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"1278218CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":9415.5,"cant_tot":48,"precio":182.29,"u6m":6,"ing6m":1110.0,"u3m":0,"up3m":6,"dias_sin":121,"prom_men":1.0,"stock_rec":2,"monto_oc":364.58,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":12},{"cod":"1750505CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":9392.02,"cant_tot":7,"precio":956.0,"u6m":6,"ing6m":8976.02,"u3m":6,"up3m":0,"dias_sin":0,"prom_men":1.0,"stock_rec":2,"monto_oc":1912.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":2},{"cod":"2270172CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":9374.65,"cant_tot":262,"precio":38.42,"u6m":49,"ing6m":1757.67,"u3m":24,"up3m":25,"dias_sin":0,"prom_men":8.2,"stock_rec":17,"monto_oc":653.1,"acel_pct":-4.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":24},{"cod":"4W9822CTP","clase":"A","familia":"Chasis y Estructura","marca":"CTP","ing_tot":9348.0,"cant_tot":9,"precio":1038.67,"u6m":1,"ing6m":1000.0,"u3m":0,"up3m":1,"dias_sin":182,"prom_men":0.2,"stock_rec":1,"monto_oc":1038.67,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":9},{"cod":"7N3486CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":9335.64,"cant_tot":33,"precio":273.99,"u6m":9,"ing6m":4006.23,"u3m":4,"up3m":5,"dias_sin":31,"prom_men":1.5,"stock_rec":3,"monto_oc":821.97,"acel_pct":-20.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":22},{"cod":"1770440CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":9316.91,"cant_tot":8,"precio":1164.61,"u6m":3,"ing6m":5579.91,"u3m":2,"up3m":1,"dias_sin":31,"prom_men":0.5,"stock_rec":1,"monto_oc":1164.61,"acel_pct":100.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"6E3136CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":9271.0,"cant_tot":4,"precio":2317.75,"u6m":1,"ing6m":2180.0,"u3m":0,"up3m":1,"dias_sin":182,"prom_men":0.2,"stock_rec":1,"monto_oc":2317.75,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":4},{"cod":"0875805CTP","clase":"A","familia":"Repuestos Menores","marca":"CTP","ing_tot":9235.13,"cant_tot":51,"precio":193.27,"u6m":13,"ing6m":3276.93,"u3m":6,"up3m":7,"dias_sin":31,"prom_men":2.2,"stock_rec":5,"monto_oc":966.36,"acel_pct":-14.3,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":20},{"cod":"7T9307CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":9234.0,"cant_tot":54,"precio":171.0,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":1066,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":3},{"cod":"3938986PKCTP","clase":"A","familia":"Componentes Motor","marca":"PKCTP","ing_tot":9214.49,"cant_tot":24,"precio":442.96,"u6m":24,"ing6m":9214.49,"u3m":12,"up3m":12,"dias_sin":0,"prom_men":4.0,"stock_rec":8,"monto_oc":3543.68,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":3},{"cod":"9X1439CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":9186.14,"cant_tot":333,"precio":28.62,"u6m":45,"ing6m":1317.89,"u3m":8,"up3m":37,"dias_sin":59,"prom_men":7.5,"stock_rec":15,"monto_oc":429.33,"acel_pct":-78.4,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"3G7658CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":9131.14,"cant_tot":41,"precio":227.85,"u6m":7,"ing6m":2599.44,"u3m":4,"up3m":3,"dias_sin":31,"prom_men":1.2,"stock_rec":3,"monto_oc":683.56,"acel_pct":33.3,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":25},{"cod":"5M6126CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":9126.85,"cant_tot":1032,"precio":9.44,"u6m":175,"ing6m":2368.68,"u3m":80,"up3m":95,"dias_sin":0,"prom_men":29.2,"stock_rec":59,"monto_oc":557.03,"acel_pct":-15.8,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":40},{"cod":"3509729CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":9115.32,"cant_tot":1,"precio":9115.32,"u6m":1,"ing6m":9115.32,"u3m":1,"up3m":0,"dias_sin":0,"prom_men":0.2,"stock_rec":1,"monto_oc":9115.32,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":1},{"cod":"2456375CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":9092.8,"cant_tot":129,"precio":62.4,"u6m":74,"ing6m":6309.57,"u3m":53,"up3m":21,"dias_sin":0,"prom_men":12.3,"stock_rec":25,"monto_oc":1560.1,"acel_pct":152.4,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"1T0020CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":9089.6,"cant_tot":61,"precio":149.97,"u6m":7,"ing6m":1569.48,"u3m":2,"up3m":5,"dias_sin":0,"prom_men":1.2,"stock_rec":3,"monto_oc":449.9,"acel_pct":-60.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":35},{"cod":"1J6740CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":8977.3,"cant_tot":24,"precio":376.67,"u6m":4,"ing6m":2749.3,"u3m":2,"up3m":2,"dias_sin":59,"prom_men":0.7,"stock_rec":2,"monto_oc":753.35,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":11},{"cod":"4619930CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":8957.0,"cant_tot":9,"precio":997.12,"u6m":1,"ing6m":1052.0,"u3m":0,"up3m":1,"dias_sin":151,"prom_men":0.2,"stock_rec":1,"monto_oc":997.12,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"3238674CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":8904.14,"cant_tot":20,"precio":466.62,"u6m":5,"ing6m":2927.39,"u3m":1,"up3m":4,"dias_sin":0,"prom_men":0.8,"stock_rec":2,"monto_oc":933.23,"acel_pct":-75.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":14},{"cod":"3491063CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":8732.46,"cant_tot":52,"precio":166.58,"u6m":10,"ing6m":3502.21,"u3m":8,"up3m":2,"dias_sin":0,"prom_men":1.7,"stock_rec":4,"monto_oc":666.33,"acel_pct":300.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"2507696CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":8722.18,"cant_tot":13,"precio":671.01,"u6m":1,"ing6m":683.1,"u3m":0,"up3m":1,"dias_sin":182,"prom_men":0.2,"stock_rec":1,"monto_oc":671.01,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":11},{"cod":"1976440CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":8689.5,"cant_tot":29,"precio":314.96,"u6m":6,"ing6m":2095.75,"u3m":1,"up3m":5,"dias_sin":31,"prom_men":1.0,"stock_rec":2,"monto_oc":629.92,"acel_pct":-80.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"CTPC15005ACTP","clase":"A","familia":"Repuestos Generales","marca":"ACTP","ing_tot":8662.95,"cant_tot":5,"precio":1192.12,"u6m":3,"ing6m":6764.2,"u3m":2,"up3m":1,"dias_sin":0,"prom_men":0.5,"stock_rec":1,"monto_oc":1192.12,"acel_pct":100.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":4},{"cod":"1727767CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":8616.9,"cant_tot":35,"precio":239.93,"u6m":4,"ing6m":1323.92,"u3m":1,"up3m":3,"dias_sin":0,"prom_men":0.7,"stock_rec":2,"monto_oc":479.85,"acel_pct":-66.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":27},{"cod":"2071517CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":8604.27,"cant_tot":17,"precio":528.99,"u6m":3,"ing6m":2280.47,"u3m":1,"up3m":2,"dias_sin":0,"prom_men":0.5,"stock_rec":1,"monto_oc":528.99,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":14},{"cod":"3089259CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":8588.79,"cant_tot":2738,"precio":3.45,"u6m":631,"ing6m":2871.28,"u3m":254,"up3m":377,"dias_sin":0,"prom_men":105.2,"stock_rec":211,"monto_oc":728.14,"acel_pct":-32.6,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"6H2577CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":8556.96,"cant_tot":139,"precio":57.65,"u6m":37,"ing6m":3484.96,"u3m":16,"up3m":21,"dias_sin":0,"prom_men":6.2,"stock_rec":13,"monto_oc":749.5,"acel_pct":-23.8,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":23},{"cod":"1174013CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":8554.89,"cant_tot":179,"precio":53.73,"u6m":21,"ing6m":1511.56,"u3m":8,"up3m":13,"dias_sin":0,"prom_men":3.5,"stock_rec":7,"monto_oc":376.08,"acel_pct":-38.5,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":34},{"cod":"1168154LKCTP","clase":"A","familia":"Filtros y Lubricación","marca":"LKCTP","ing_tot":8408.05,"cant_tot":29,"precio":255.04,"u6m":6,"ing6m":4030.8,"u3m":6,"up3m":0,"dias_sin":59,"prom_men":1.0,"stock_rec":2,"monto_oc":510.07,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"4616187CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":8351.66,"cant_tot":27,"precio":310.91,"u6m":4,"ing6m":1247.0,"u3m":2,"up3m":2,"dias_sin":90,"prom_men":0.7,"stock_rec":2,"monto_oc":621.82,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":19},{"cod":"1W6541CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":8343.36,"cant_tot":133,"precio":63.06,"u6m":4,"ing6m":313.68,"u3m":0,"up3m":4,"dias_sin":182,"prom_men":0.7,"stock_rec":2,"monto_oc":126.12,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"9C0398CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":8285.56,"cant_tot":136,"precio":56.24,"u6m":44,"ing6m":4477.3,"u3m":21,"up3m":23,"dias_sin":0,"prom_men":7.3,"stock_rec":15,"monto_oc":843.54,"acel_pct":-8.7,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":28},{"cod":"1065122CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":8267.89,"cant_tot":14,"precio":502.84,"u6m":4,"ing6m":4025.89,"u3m":3,"up3m":1,"dias_sin":0,"prom_men":0.7,"stock_rec":2,"monto_oc":1005.68,"acel_pct":200.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":14},{"cod":"5T2925CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":8216.69,"cant_tot":143,"precio":59.78,"u6m":23,"ing6m":1976.59,"u3m":8,"up3m":15,"dias_sin":59,"prom_men":3.8,"stock_rec":8,"monto_oc":478.27,"acel_pct":-46.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"8T1606CTP","clase":"A","familia":"Sellos y Juntas","marca":"CTP","ing_tot":8210.1,"cant_tot":109,"precio":73.04,"u6m":31,"ing6m":3703.98,"u3m":19,"up3m":12,"dias_sin":0,"prom_men":5.2,"stock_rec":11,"monto_oc":803.45,"acel_pct":58.3,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":30},{"cod":"3769017CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":8171.6,"cant_tot":358,"precio":23.55,"u6m":81,"ing6m":2560.2,"u3m":38,"up3m":43,"dias_sin":0,"prom_men":13.5,"stock_rec":27,"monto_oc":635.74,"acel_pct":-11.6,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":41},{"cod":"5P9176CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":8131.11,"cant_tot":125,"precio":68.16,"u6m":32,"ing6m":2468.91,"u3m":10,"up3m":22,"dias_sin":0,"prom_men":5.3,"stock_rec":11,"monto_oc":749.78,"acel_pct":-54.5,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"2357636CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":8091.0,"cant_tot":17,"precio":498.92,"u6m":3,"ing6m":2237.0,"u3m":2,"up3m":1,"dias_sin":59,"prom_men":0.5,"stock_rec":1,"monto_oc":498.92,"acel_pct":100.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":14},{"cod":"9F5124CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":8058.43,"cant_tot":377,"precio":24.03,"u6m":24,"ing6m":917.77,"u3m":12,"up3m":12,"dias_sin":0,"prom_men":4.0,"stock_rec":8,"monto_oc":192.26,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"2W5540CTP","clase":"A","familia":"Refrigeración","marca":"CTP","ing_tot":8055.6,"cant_tot":21,"precio":348.12,"u6m":6,"ing6m":4428.6,"u3m":6,"up3m":0,"dias_sin":59,"prom_men":1.0,"stock_rec":2,"monto_oc":696.24,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":5},{"cod":"2126215CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":7973.26,"cant_tot":12,"precio":651.12,"u6m":2,"ing6m":2731.76,"u3m":1,"up3m":1,"dias_sin":59,"prom_men":0.3,"stock_rec":1,"monto_oc":651.12,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"1V5635CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":7941.01,"cant_tot":116,"precio":69.44,"u6m":36,"ing6m":2983.71,"u3m":9,"up3m":27,"dias_sin":0,"prom_men":6.0,"stock_rec":12,"monto_oc":833.27,"acel_pct":-66.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":25},{"cod":"2826648CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":7931.76,"cant_tot":10,"precio":721.07,"u6m":5,"ing6m":5705.76,"u3m":4,"up3m":1,"dias_sin":0,"prom_men":0.8,"stock_rec":2,"monto_oc":1442.14,"acel_pct":300.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":11},{"cod":"1W1695CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":7927.08,"cant_tot":69,"precio":124.64,"u6m":14,"ing6m":2191.79,"u3m":6,"up3m":8,"dias_sin":0,"prom_men":2.3,"stock_rec":5,"monto_oc":623.2,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":30},{"cod":"6N7527CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":7922.39,"cant_tot":206,"precio":36.77,"u6m":6,"ing6m":216.0,"u3m":0,"up3m":6,"dias_sin":182,"prom_men":1.0,"stock_rec":2,"monto_oc":73.54,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":18},{"cod":"1139539CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7880.34,"cant_tot":15,"precio":614.33,"u6m":3,"ing6m":2474.74,"u3m":1,"up3m":2,"dias_sin":0,"prom_men":0.5,"stock_rec":1,"monto_oc":614.33,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"1465076CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7853.21,"cant_tot":8,"precio":976.03,"u6m":1,"ing6m":880.0,"u3m":1,"up3m":0,"dias_sin":90,"prom_men":0.2,"stock_rec":1,"monto_oc":976.03,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"7G0437CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":7806.23,"cant_tot":449,"precio":17.25,"u6m":124,"ing6m":2892.36,"u3m":54,"up3m":70,"dias_sin":31,"prom_men":20.7,"stock_rec":42,"monto_oc":724.34,"acel_pct":-22.9,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":28},{"cod":"1045857CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7804.25,"cant_tot":10,"precio":777.14,"u6m":2,"ing6m":1347.0,"u3m":0,"up3m":2,"dias_sin":121,"prom_men":0.3,"stock_rec":1,"monto_oc":777.14,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":9},{"cod":"5M6651CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":7796.25,"cant_tot":7,"precio":1089.83,"u6m":1,"ing6m":1201.0,"u3m":1,"up3m":0,"dias_sin":90,"prom_men":0.2,"stock_rec":1,"monto_oc":1089.83,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"4583867CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":7782.97,"cant_tot":27,"precio":304.05,"u6m":6,"ing6m":2199.14,"u3m":2,"up3m":4,"dias_sin":0,"prom_men":1.0,"stock_rec":2,"monto_oc":608.09,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":16},{"cod":"1V8033CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":7711.18,"cant_tot":31,"precio":236.19,"u6m":5,"ing6m":2393.43,"u3m":5,"up3m":0,"dias_sin":31,"prom_men":0.8,"stock_rec":2,"monto_oc":472.38,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":12},{"cod":"9J6586CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":7707.0,"cant_tot":42,"precio":173.86,"u6m":6,"ing6m":2136.0,"u3m":6,"up3m":0,"dias_sin":31,"prom_men":1.0,"stock_rec":2,"monto_oc":347.71,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":9},{"cod":"1077545PKCTP","clase":"A","familia":"Filtros y Lubricación","marca":"PKCTP","ing_tot":7649.0,"cant_tot":56,"precio":136.56,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":274,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":9},{"cod":"4901723CTP","clase":"A","familia":"Repuestos Transmisión","marca":"CTP","ing_tot":7641.84,"cant_tot":196,"precio":39.04,"u6m":24,"ing6m":879.6,"u3m":0,"up3m":24,"dias_sin":121,"prom_men":4.0,"stock_rec":8,"monto_oc":312.3,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"6V1013CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":7555.0,"cant_tot":48,"precio":160.0,"u6m":5,"ing6m":1498.5,"u3m":2,"up3m":3,"dias_sin":0,"prom_men":0.8,"stock_rec":2,"monto_oc":320.01,"acel_pct":-33.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"7E6794CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":7534.37,"cant_tot":192,"precio":39.53,"u6m":70,"ing6m":3587.12,"u3m":28,"up3m":42,"dias_sin":0,"prom_men":11.7,"stock_rec":24,"monto_oc":948.65,"acel_pct":-33.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":25},{"cod":"2221081CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":7497.65,"cant_tot":236,"precio":35.84,"u6m":40,"ing6m":1969.65,"u3m":16,"up3m":24,"dias_sin":31,"prom_men":6.7,"stock_rec":14,"monto_oc":501.8,"acel_pct":-33.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"CTP966DCTP","clase":"A","familia":"Repuestos Generales","marca":"DCTP","ing_tot":7480.55,"cant_tot":40,"precio":191.15,"u6m":7,"ing6m":1650.16,"u3m":3,"up3m":4,"dias_sin":59,"prom_men":1.2,"stock_rec":3,"monto_oc":573.46,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":23},{"cod":"8E2837CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":7480.0,"cant_tot":2,"precio":3740.0,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":424,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":2},{"cod":"9W6647CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":7473.98,"cant_tot":726,"precio":9.32,"u6m":116,"ing6m":1916.0,"u3m":82,"up3m":34,"dias_sin":59,"prom_men":19.3,"stock_rec":39,"monto_oc":363.42,"acel_pct":141.2,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":36},{"cod":"8P2051CTP","clase":"A","familia":"Repuestos Motor","marca":"CTP","ing_tot":7470.19,"cant_tot":203,"precio":36.65,"u6m":40,"ing6m":2109.46,"u3m":14,"up3m":26,"dias_sin":59,"prom_men":6.7,"stock_rec":14,"monto_oc":513.13,"acel_pct":-46.2,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"3330960CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":7449.4,"cant_tot":938,"precio":9.32,"u6m":152,"ing6m":1378.68,"u3m":55,"up3m":97,"dias_sin":0,"prom_men":25.3,"stock_rec":51,"monto_oc":475.41,"acel_pct":-43.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":34},{"cod":"1487455CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7447.53,"cant_tot":482,"precio":16.93,"u6m":77,"ing6m":1402.35,"u3m":21,"up3m":56,"dias_sin":31,"prom_men":12.8,"stock_rec":26,"monto_oc":440.13,"acel_pct":-62.5,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":37},{"cod":"1278222CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7415.52,"cant_tot":26,"precio":232.59,"u6m":9,"ing6m":3448.52,"u3m":3,"up3m":6,"dias_sin":59,"prom_men":1.5,"stock_rec":3,"monto_oc":697.78,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":11},{"cod":"7N0718CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":7388.06,"cant_tot":399,"precio":21.57,"u6m":82,"ing6m":1707.24,"u3m":17,"up3m":65,"dias_sin":0,"prom_men":13.7,"stock_rec":28,"monto_oc":604.08,"acel_pct":-73.8,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":42},{"cod":"3J5432CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":7308.5,"cant_tot":29,"precio":250.38,"u6m":5,"ing6m":2516.07,"u3m":3,"up3m":2,"dias_sin":0,"prom_men":0.8,"stock_rec":2,"monto_oc":500.76,"acel_pct":50.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":19},{"cod":"9T3508CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":7260.58,"cant_tot":8,"precio":852.71,"u6m":4,"ing6m":4423.8,"u3m":2,"up3m":2,"dias_sin":59,"prom_men":0.7,"stock_rec":2,"monto_oc":1705.43,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":5},{"cod":"8N1721CTP","clase":"A","familia":"Sellos y Juntas","marca":"CTP","ing_tot":7247.82,"cant_tot":81,"precio":99.48,"u6m":12,"ing6m":2132.36,"u3m":6,"up3m":6,"dias_sin":0,"prom_men":2.0,"stock_rec":4,"monto_oc":397.92,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"3G3357CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":7245.8,"cant_tot":120,"precio":59.58,"u6m":23,"ing6m":2394.19,"u3m":14,"up3m":9,"dias_sin":31,"prom_men":3.8,"stock_rec":8,"monto_oc":476.66,"acel_pct":55.6,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":24},{"cod":"2979150CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":7178.11,"cant_tot":11,"precio":783.26,"u6m":3,"ing6m":3551.31,"u3m":3,"up3m":0,"dias_sin":31,"prom_men":0.5,"stock_rec":1,"monto_oc":783.26,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"2285615CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":7153.81,"cant_tot":153,"precio":41.94,"u6m":50,"ing6m":3503.66,"u3m":48,"up3m":2,"dias_sin":0,"prom_men":8.3,"stock_rec":17,"monto_oc":712.91,"acel_pct":2300.0,"tend":"↑ CRECIENDO","imp_accion":"🔴 IMPORTAR YA","accion_sin":"REVISAR URGENTE","n_trans":18},{"cod":"9N4352CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":7142.85,"cant_tot":257,"precio":27.0,"u6m":39,"ing6m":1712.29,"u3m":12,"up3m":27,"dias_sin":0,"prom_men":6.5,"stock_rec":13,"monto_oc":350.97,"acel_pct":-55.6,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"6V7830CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":7135.0,"cant_tot":12,"precio":593.75,"u6m":2,"ing6m":1170.0,"u3m":0,"up3m":2,"dias_sin":182,"prom_men":0.3,"stock_rec":1,"monto_oc":593.75,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"1478211CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7077.59,"cant_tot":240,"precio":30.88,"u6m":67,"ing6m":2257.13,"u3m":24,"up3m":43,"dias_sin":59,"prom_men":11.2,"stock_rec":23,"monto_oc":710.24,"acel_pct":-44.2,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":24},{"cod":"1233472CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7077.3,"cant_tot":17,"precio":408.88,"u6m":1,"ing6m":455.0,"u3m":1,"up3m":0,"dias_sin":90,"prom_men":0.2,"stock_rec":1,"monto_oc":408.88,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":16},{"cod":"1796152CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7070.13,"cant_tot":31,"precio":239.87,"u6m":5,"ing6m":1419.09,"u3m":3,"up3m":2,"dias_sin":59,"prom_men":0.8,"stock_rec":2,"monto_oc":479.75,"acel_pct":50.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"1494915CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":7019.01,"cant_tot":11,"precio":634.41,"u6m":3,"ing6m":1767.51,"u3m":0,"up3m":3,"dias_sin":151,"prom_men":0.5,"stock_rec":1,"monto_oc":634.41,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"3S2616CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":7013.91,"cant_tot":20,"precio":358.44,"u6m":4,"ing6m":1761.74,"u3m":1,"up3m":3,"dias_sin":31,"prom_men":0.7,"stock_rec":2,"monto_oc":716.87,"acel_pct":-66.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"9C0166CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":7008.24,"cant_tot":35,"precio":209.07,"u6m":7,"ing6m":1578.86,"u3m":3,"up3m":4,"dias_sin":59,"prom_men":1.2,"stock_rec":3,"monto_oc":627.2,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"3G2752CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":7007.92,"cant_tot":26,"precio":282.06,"u6m":1,"ing6m":773.49,"u3m":1,"up3m":0,"dias_sin":59,"prom_men":0.2,"stock_rec":1,"monto_oc":282.06,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":17},{"cod":"7X7700CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":6956.52,"cant_tot":227,"precio":31.34,"u6m":49,"ing6m":2019.81,"u3m":26,"up3m":23,"dias_sin":0,"prom_men":8.2,"stock_rec":17,"monto_oc":532.76,"acel_pct":13.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"CTP3116CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":6953.61,"cant_tot":33,"precio":208.03,"u6m":4,"ing6m":1538.3,"u3m":2,"up3m":2,"dias_sin":0,"prom_men":0.7,"stock_rec":2,"monto_oc":416.06,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":20},{"cod":"1G8878CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":6951.32,"cant_tot":138,"precio":45.32,"u6m":43,"ing6m":3560.82,"u3m":39,"up3m":4,"dias_sin":0,"prom_men":7.2,"stock_rec":15,"monto_oc":679.8,"acel_pct":875.0,"tend":"↑ CRECIENDO","imp_accion":"🟠 IMPORTAR PRONTO","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"7N3521CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":6914.93,"cant_tot":9,"precio":770.93,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":212,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"5M6670CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":6905.62,"cant_tot":11,"precio":646.56,"u6m":2,"ing6m":2485.62,"u3m":2,"up3m":0,"dias_sin":59,"prom_men":0.3,"stock_rec":1,"monto_oc":646.56,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":10},{"cod":"3387450CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":6866.34,"cant_tot":15,"precio":456.64,"u6m":1,"ing6m":425.7,"u3m":0,"up3m":1,"dias_sin":182,"prom_men":0.2,"stock_rec":1,"monto_oc":456.64,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"2420673CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":6854.25,"cant_tot":7,"precio":979.18,"u6m":3,"ing6m":3316.25,"u3m":1,"up3m":2,"dias_sin":90,"prom_men":0.5,"stock_rec":1,"monto_oc":979.18,"acel_pct":-50.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":7},{"cod":"6I2501CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":6820.95,"cant_tot":129,"precio":40.58,"u6m":35,"ing6m":3621.71,"u3m":31,"up3m":4,"dias_sin":0,"prom_men":5.8,"stock_rec":12,"monto_oc":486.9,"acel_pct":675.0,"tend":"↑ CRECIENDO","imp_accion":"🟠 IMPORTAR PRONTO","accion_sin":"REVISAR URGENTE","n_trans":33},{"cod":"4N6859CTP","clase":"A","familia":"Chasis y Estructura","marca":"CTP","ing_tot":6812.98,"cant_tot":19,"precio":330.96,"u6m":4,"ing6m":2876.32,"u3m":3,"up3m":1,"dias_sin":31,"prom_men":0.7,"stock_rec":2,"monto_oc":661.93,"acel_pct":200.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":15},{"cod":"3261644CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":6799.14,"cant_tot":196,"precio":33.34,"u6m":60,"ing6m":3442.82,"u3m":46,"up3m":14,"dias_sin":0,"prom_men":10.0,"stock_rec":20,"monto_oc":666.77,"acel_pct":228.6,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"3522139CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":6753.52,"cant_tot":37,"precio":193.45,"u6m":9,"ing6m":1737.52,"u3m":2,"up3m":7,"dias_sin":31,"prom_men":1.5,"stock_rec":3,"monto_oc":580.35,"acel_pct":-71.4,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":25},{"cod":"1P4404CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":6735.1,"cant_tot":3,"precio":2245.03,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":943,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":3},{"cod":"3159810CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":6640.0,"cant_tot":7,"precio":960.0,"u6m":2,"ing6m":1760.0,"u3m":2,"up3m":0,"dias_sin":90,"prom_men":0.3,"stock_rec":1,"monto_oc":960.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":6},{"cod":"9C8418CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":6633.28,"cant_tot":50,"precio":132.79,"u6m":10,"ing6m":1240.0,"u3m":1,"up3m":9,"dias_sin":90,"prom_men":1.7,"stock_rec":4,"monto_oc":531.18,"acel_pct":-88.9,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"3318905CTP","clase":"A","familia":"Componentes Motor","marca":"CTP","ing_tot":6627.33,"cant_tot":37,"precio":177.32,"u6m":4,"ing6m":299.22,"u3m":0,"up3m":4,"dias_sin":0,"prom_men":0.7,"stock_rec":2,"monto_oc":354.63,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"6Y7922CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":6623.89,"cant_tot":449,"precio":12.48,"u6m":162,"ing6m":3808.82,"u3m":82,"up3m":80,"dias_sin":0,"prom_men":27.0,"stock_rec":54,"monto_oc":674.03,"acel_pct":2.5,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":19},{"cod":"1007860CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":6600.22,"cant_tot":443,"precio":16.0,"u6m":79,"ing6m":1423.6,"u3m":21,"up3m":58,"dias_sin":0,"prom_men":13.2,"stock_rec":27,"monto_oc":431.92,"acel_pct":-63.8,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":36},{"cod":"2418368CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":6596.58,"cant_tot":48,"precio":154.3,"u6m":14,"ing6m":2216.78,"u3m":6,"up3m":8,"dias_sin":0,"prom_men":2.3,"stock_rec":5,"monto_oc":771.51,"acel_pct":-25.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"1052508CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":6591.43,"cant_tot":221,"precio":34.32,"u6m":36,"ing6m":1382.26,"u3m":9,"up3m":27,"dias_sin":0,"prom_men":6.0,"stock_rec":12,"monto_oc":411.81,"acel_pct":-66.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":38},{"cod":"4T6869CTP","clase":"A","familia":"Chasis y Estructura","marca":"CTP","ing_tot":6569.79,"cant_tot":22,"precio":303.11,"u6m":5,"ing6m":1440.0,"u3m":0,"up3m":5,"dias_sin":121,"prom_men":0.8,"stock_rec":2,"monto_oc":606.22,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":16},{"cod":"2482987CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":6507.0,"cant_tot":124,"precio":52.47,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":304,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":12},{"cod":"2443114CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":6451.39,"cant_tot":28,"precio":215.06,"u6m":16,"ing6m":4625.64,"u3m":11,"up3m":5,"dias_sin":0,"prom_men":2.7,"stock_rec":6,"monto_oc":1290.34,"acel_pct":120.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"1105764CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":6444.4,"cant_tot":11,"precio":582.34,"u6m":1,"ing6m":543.2,"u3m":0,"up3m":1,"dias_sin":182,"prom_men":0.2,"stock_rec":1,"monto_oc":582.34,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":10},{"cod":"8G4189CTP","clase":"A","familia":"Repuestos Motor","marca":"CTP","ing_tot":6434.44,"cant_tot":379,"precio":18.57,"u6m":71,"ing6m":1088.43,"u3m":7,"up3m":64,"dias_sin":0,"prom_men":11.8,"stock_rec":24,"monto_oc":445.66,"acel_pct":-89.1,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":41},{"cod":"5P5067CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":6434.13,"cant_tot":101,"precio":65.22,"u6m":13,"ing6m":1129.62,"u3m":2,"up3m":11,"dias_sin":31,"prom_men":2.2,"stock_rec":5,"monto_oc":326.1,"acel_pct":-81.8,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":36},{"cod":"3G7655CTP","clase":"A","familia":"Transmisión","marca":"CTP","ing_tot":6426.8,"cant_tot":32,"precio":199.94,"u6m":2,"ing6m":350.0,"u3m":1,"up3m":1,"dias_sin":90,"prom_men":0.3,"stock_rec":1,"monto_oc":199.94,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":20},{"cod":"1S9670CTP","clase":"A","familia":"Filtros","marca":"CTP","ing_tot":6398.67,"cant_tot":172,"precio":37.54,"u6m":23,"ing6m":1652.28,"u3m":8,"up3m":15,"dias_sin":0,"prom_men":3.8,"stock_rec":8,"monto_oc":300.3,"acel_pct":-46.7,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":27},{"cod":"5S6795CTP","clase":"A","familia":"Eléctrico","marca":"CTP","ing_tot":6380.31,"cant_tot":223,"precio":31.4,"u6m":51,"ing6m":2277.59,"u3m":29,"up3m":22,"dias_sin":0,"prom_men":8.5,"stock_rec":17,"monto_oc":533.74,"acel_pct":31.8,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":29},{"cod":"9W6686CTP","clase":"A","familia":"Hidráulico","marca":"CTP","ing_tot":6358.21,"cant_tot":110,"precio":54.06,"u6m":25,"ing6m":2474.6,"u3m":14,"up3m":11,"dias_sin":0,"prom_men":4.2,"stock_rec":9,"monto_oc":486.52,"acel_pct":27.3,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":26},{"cod":"7W5389CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":6302.32,"cant_tot":132,"precio":43.49,"u6m":30,"ing6m":2493.84,"u3m":25,"up3m":5,"dias_sin":0,"prom_men":5.0,"stock_rec":10,"monto_oc":434.88,"acel_pct":400.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":37},{"cod":"7T2336CTP","clase":"A","familia":"Tren de Rodaje","marca":"CTP","ing_tot":6289.94,"cant_tot":100,"precio":62.09,"u6m":25,"ing6m":2926.94,"u3m":16,"up3m":9,"dias_sin":0,"prom_men":4.2,"stock_rec":9,"monto_oc":558.79,"acel_pct":77.8,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":13},{"cod":"1705187CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":6246.0,"cant_tot":48,"precio":130.12,"u6m":12,"ing6m":1488.0,"u3m":0,"up3m":12,"dias_sin":121,"prom_men":2.0,"stock_rec":4,"monto_oc":520.5,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":8},{"cod":"6K2697CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":6244.76,"cant_tot":72,"precio":67.18,"u6m":21,"ing6m":3528.92,"u3m":17,"up3m":4,"dias_sin":0,"prom_men":3.5,"stock_rec":7,"monto_oc":470.24,"acel_pct":325.0,"tend":"↑ CRECIENDO","imp_accion":"🟡 AUMENTAR STOCK","accion_sin":"REVISAR URGENTE","n_trans":31},{"cod":"1908970CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":6242.3,"cant_tot":26,"precio":249.71,"u6m":5,"ing6m":875.0,"u3m":1,"up3m":4,"dias_sin":90,"prom_men":0.8,"stock_rec":2,"monto_oc":499.43,"acel_pct":-75.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":21},{"cod":"4E2168CTP","clase":"A","familia":"Repuestos Generales","marca":"CTP","ing_tot":6236.65,"cant_tot":40,"precio":149.75,"u6m":5,"ing6m":1613.15,"u3m":3,"up3m":2,"dias_sin":0,"prom_men":0.8,"stock_rec":2,"monto_oc":299.5,"acel_pct":50.0,"tend":"↑ CRECIENDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":20},{"cod":"6E2396CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":6223.18,"cant_tot":14,"precio":450.52,"u6m":3,"ing6m":1300.0,"u3m":0,"up3m":3,"dias_sin":121,"prom_men":0.5,"stock_rec":1,"monto_oc":450.52,"acel_pct":-100.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":12},{"cod":"1275537CTP","clase":"A","familia":"Filtros y Lubricación","marca":"CTP","ing_tot":6211.73,"cant_tot":6,"precio":1035.29,"u6m":1,"ing6m":924.98,"u3m":1,"up3m":0,"dias_sin":90,"prom_men":0.2,"stock_rec":1,"monto_oc":1035.29,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":6},{"cod":"2357642CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":6210.61,"cant_tot":15,"precio":429.24,"u6m":4,"ing6m":2164.61,"u3m":2,"up3m":2,"dias_sin":59,"prom_men":0.7,"stock_rec":2,"monto_oc":858.48,"acel_pct":0.0,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":12},{"cod":"2964292CTP","clase":"A","familia":"Repuestos Estructura","marca":"CTP","ing_tot":6185.21,"cant_tot":78,"precio":84.96,"u6m":15,"ing6m":1461.52,"u3m":6,"up3m":9,"dias_sin":31,"prom_men":2.5,"stock_rec":5,"monto_oc":424.81,"acel_pct":-33.3,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":34},{"cod":"4N7692CTP","clase":"A","familia":"Chasis y Estructura","marca":"CTP","ing_tot":6160.0,"cant_tot":6,"precio":1026.67,"u6m":0,"ing6m":0.0,"u3m":0,"up3m":0,"dias_sin":274,"prom_men":0.0,"stock_rec":0,"monto_oc":0.0,"acel_pct":0.0,"tend":"NUEVO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":6},{"cod":"6E4719CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":6145.5,"cant_tot":73,"precio":90.0,"u6m":16,"ing6m":1526.1,"u3m":6,"up3m":10,"dias_sin":0,"prom_men":2.7,"stock_rec":6,"monto_oc":540.02,"acel_pct":-40.0,"tend":"↓ BAJANDO","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":32},{"cod":"6I2505CTP","clase":"A","familia":"Motor","marca":"CTP","ing_tot":6131.35,"cant_tot":104,"precio":58.86,"u6m":51,"ing6m":3479.37,"u3m":25,"up3m":26,"dias_sin":0,"prom_men":8.5,"stock_rec":17,"monto_oc":1000.55,"acel_pct":-3.8,"tend":"→ ESTABLE","imp_accion":"🟢 MONITOREAR","accion_sin":"REVISAR URGENTE","n_trans":18}],"weeks":[{"f":"2022-08-29","v":12711,"pe":12711,"pf":13347,"inv":0,"pp":4004,"ing":156140.85,"pr":38.44},{"f":"2022-09-26","v":14019,"pe":13365,"pf":14033,"inv":2821,"pp":16840,"ing":153761.96,"pr":35.33},{"f":"2022-10-31","v":9810,"pe":12180,"pf":12789,"inv":5537,"pp":12526,"ing":110725.44,"pr":36.59},{"f":"2022-11-28","v":9787,"pe":11582,"pf":12161,"inv":4806,"pp":9056,"ing":109856.31,"pr":33.92},{"f":"2022-12-26","v":8297,"pe":10478,"pf":11002,"inv":4905,"pp":8396,"ing":88332.02,"pr":33.26},{"f":"2023-01-30","v":11027,"pe":9730,"pf":10216,"inv":1232,"pp":7354,"ing":129851.78,"pr":38.12},{"f":"2023-02-27","v":11036,"pe":10037,"pf":10539,"inv":1611,"pp":11415,"ing":121924.49,"pr":34.61},{"f":"2023-03-27","v":11233,"pe":10398,"pf":10918,"inv":1869,"pp":11491,"ing":159592.3,"pr":37.49},{"f":"2023-04-24","v":10887,"pe":11046,"pf":11598,"inv":3031,"pp":12049,"ing":135214.43,"pr":34.97},{"f":"2023-05-29","v":11535,"pe":11173,"pf":11732,"inv":2543,"pp":11048,"ing":158290.2,"pr":40.08},{"f":"2023-06-26","v":10062,"pe":10929,"pf":11475,"inv":3708,"pp":11227,"ing":128918.21,"pr":40.23},{"f":"2023-07-31","v":10124,"pe":10652,"pf":11185,"inv":3298,"pp":9714,"ing":148649.25,"pr":43.98},{"f":"2023-08-28","v":11401,"pe":10780,"pf":11319,"inv":2182,"pp":10285,"ing":148295.53,"pr":38.93},{"f":"2023-09-25","v":12158,"pe":10936,"pf":11483,"inv":1622,"pp":11598,"ing":151606.36,"pr":38.91},{"f":"2023-10-30","v":10884,"pe":11142,"pf":11699,"inv":3155,"pp":12417,"ing":153984.41,"pr":37.64},{"f":"2023-11-27","v":9878,"pe":11080,"pf":11634,"inv":4083,"pp":10806,"ing":133934.92,"pr":32.96},{"f":"2023-12-25","v":9317,"pe":10559,"pf":11087,"inv":3987,"pp":9222,"ing":109832.73,"pr":37.3},{"f":"2024-01-29","v":11893,"pe":10493,"pf":11018,"inv":1329,"pp":9234,"ing":135008.28,"pr":37.03},{"f":"2024-02-26","v":12579,"pe":10917,"pf":11463,"inv":1177,"pp":12427,"ing":147263.97,"pr":39.28},{"f":"2024-03-25","v":10120,"pe":10977,"pf":11526,"inv":3711,"pp":12655,"ing":136504.66,"pr":35.76},{"f":"2024-04-29","v":11445,"pe":11509,"pf":12084,"inv":3056,"pp":10790,"ing":134488.73,"pr":35.12},{"f":"2024-05-27","v":10228,"pe":11093,"pf":11648,"inv":3750,"pp":10922,"ing":143002.75,"pr":38.26},{"f":"2024-06-24","v":9025,"pe":10204,"pf":10714,"inv":3832,"pp":9107,"ing":109308.48,"pr":33.03},{"f":"2024-07-29","v":10050,"pe":10187,"pf":10696,"inv":2785,"pp":9003,"ing":125412.58,"pr":33.24},{"f":"2024-08-26","v":11522,"pe":10206,"pf":10716,"inv":1337,"pp":10074,"ing":133312.68,"pr":34.48},{"f":"2024-09-30","v":11299,"pe":10474,"pf":10998,"inv":1899,"pp":11860,"ing":153066.61,"pr":36.97},{"f":"2024-10-28","v":13004,"pe":11469,"pf":12042,"inv":1446,"pp":12552,"ing":142588.11,"pr":31.36},{"f":"2024-11-25","v":14641,"pe":12616,"pf":13247,"inv":1255,"pp":14450,"ing":153618.81,"pr":33.63},{"f":"2024-12-30","v":12309,"pe":12813,"pf":13454,"inv":3836,"pp":14889,"ing":145535.42,"pr":28.96},{"f":"2025-01-27","v":16705,"pe":14165,"pf":14873,"inv":1143,"pp":14012,"ing":186745.13,"pr":34.72},{"f":"2025-02-24","v":19157,"pe":15703,"pf":16488,"inv":629,"pp":18643,"ing":175940.1,"pr":31.67},{"f":"2025-03-31","v":18861,"pe":16758,"pf":17596,"inv":2254,"pp":20487,"ing":201972.26,"pr":34.53},{"f":"2025-04-28","v":17419,"pe":18036,"pf":18938,"inv":5307,"pp":20471,"ing":208073.63,"pr":37.93},{"f":"2025-05-26","v":22235,"pe":19418,"pf":20389,"inv":2232,"pp":19160,"ing":239751.61,"pr":36.99},{"f":"2025-06-30","v":19963,"pe":19620,"pf":20601,"inv":4758,"pp":22489,"ing":236759.64,"pr":36.98},{"f":"2025-07-28","v":20990,"pe":20152,"pf":21160,"inv":4402,"pp":20634,"ing":235967.81,"pr":38.93},{"f":"2025-08-25","v":21902,"pe":21272,"pf":22336,"inv":4901,"pp":22401,"ing":238963.82,"pr":37.63},{"f":"2025-09-29","v":27147,"pe":22500,"pf":23625,"inv":1203,"pp":23449,"ing":302286.76,"pr":38.08},{"f":"2025-10-27","v":23894,"pe":23483,"pf":24657,"inv":5694,"pp":28385,"ing":259936.75,"pr":37.83},{"f":"2025-11-24","v":22085,"pe":23757,"pf":24945,"inv":7849,"pp":24240,"ing":230307.72,"pr":34.7},{"f":"2025-12-29","v":22033,"pe":23790,"pf":24980,"inv":7943,"pp":22127,"ing":213847.86,"pr":34.8},{"f":"2026-01-26","v":12429,"pe":20110,"pf":21116,"inv":12910,"pp":17396,"ing":506167.68,"pr":111.59},{"f":"2026-02-23","v":14782,"pe":17832,"pf":18724,"inv":3745,"pp":5617,"ing":508329.51,"pr":111.67},{"f":"2026-03-30","v":15767,"pe":16253,"pf":17066,"inv":4712,"pp":16734,"ing":606980.3,"pr":114.78}],"kpis":{"total_ing":8310053,"total_art":10424,"clA":1854,"clB":2463,"clC":6107,"sin_mov":5043,"imp_urg":450,"marcas":["ACTP","BCTP","CTP","DCTP","KITCTP","LKCTP","OTRO","PKCTP","PTCTP","RCCTP","REMCTP"],"familias":["Chasis y Estructura","Componentes Motor","Eléctrico","Filtros","Filtros y Lubricación","Hidráulico","Motor","Piezas Eléctricas","Refrigeración","Repuestos Estructura","Repuestos Generales","Repuestos Menores","Repuestos Motor","Repuestos Transmisión","Sellos y Juntas","Transmisión","Tren de Rodaje"],"f_ini":"2022-08-31","f_fin":"2026-03-31","ing_clA":6647603,"ing_clB":1246738,"ing_clC":415711,"fam_ingresos":{"Filtros y Lubricación":1765737,"Repuestos Estructura":1306420,"Repuestos Generales":635322,"Componentes Motor":632312,"Motor":609794,"Tren de Rodaje":586555,"Hidráulico":551416,"Filtros":455401,"Eléctrico":330121,"Chasis y Estructura":311661,"Transmisión":259770,"Repuestos Transmisión":240511,"Repuestos Motor":193590,"Sellos y Juntas":182225,"Refrigeración":153016,"Repuestos Menores":55127,"Piezas Eléctricas":41074}},"fam_chart":{"Filtros y Lubricación":[{"f":"2025-04-01","v":36091.14},{"f":"2025-05-01","v":43143.06},{"f":"2025-06-01","v":52714.23},{"f":"2025-07-01","v":50219.15},{"f":"2025-08-01","v":52495.06},{"f":"2025-09-01","v":59748.0},{"f":"2025-10-01","v":53940.36},{"f":"2025-11-01","v":54606.43},{"f":"2025-12-01","v":46040.55},{"f":"2026-01-01","v":106779.87},{"f":"2026-02-01","v":98751.22},{"f":"2026-03-01","v":130149.4}],"Repuestos Estructura":[{"f":"2025-04-01","v":33793.35},{"f":"2025-05-01","v":46988.44},{"f":"2025-06-01","v":27650.31},{"f":"2025-07-01","v":33815.23},{"f":"2025-08-01","v":39291.8},{"f":"2025-09-01","v":48924.93},{"f":"2025-10-01","v":39923.29},{"f":"2025-11-01","v":37099.72},{"f":"2025-12-01","v":35785.92},{"f":"2026-01-01","v":90138.58},{"f":"2026-02-01","v":89671.59},{"f":"2026-03-01","v":68455.67}],"Repuestos Generales":[{"f":"2025-04-01","v":13329.23},{"f":"2025-05-01","v":19257.15},{"f":"2025-06-01","v":21192.02},{"f":"2025-07-01","v":22941.6},{"f":"2025-08-01","v":18083.7},{"f":"2025-09-01","v":18336.66},{"f":"2025-10-01","v":17397.91},{"f":"2025-11-01","v":14362.71},{"f":"2025-12-01","v":14626.9},{"f":"2026-01-01","v":34190.91},{"f":"2026-02-01","v":44380.53},{"f":"2026-03-01","v":57538.92}],"Componentes Motor":[{"f":"2025-04-01","v":23023.97},{"f":"2025-05-01","v":15564.67},{"f":"2025-06-01","v":19993.15},{"f":"2025-07-01","v":14659.24},{"f":"2025-08-01","v":16251.51},{"f":"2025-09-01","v":29859.14},{"f":"2025-10-01","v":21811.74},{"f":"2025-11-01","v":15572.48},{"f":"2025-12-01","v":19616.45},{"f":"2026-01-01","v":29195.85},{"f":"2026-02-01","v":35734.88},{"f":"2026-03-01","v":63048.11}],"Motor":[{"f":"2025-04-01","v":13630.59},{"f":"2025-05-01","v":10794.94},{"f":"2025-06-01","v":16170.35},{"f":"2025-07-01","v":18671.19},{"f":"2025-08-01","v":16024.75},{"f":"2025-09-01","v":25057.03},{"f":"2025-10-01","v":17992.37},{"f":"2025-11-01","v":18446.97},{"f":"2025-12-01","v":14343.84},{"f":"2026-01-01","v":27697.98},{"f":"2026-02-01","v":40125.39},{"f":"2026-03-01","v":65627.62}],"Tren de Rodaje":[{"f":"2025-04-01","v":12051.49},{"f":"2025-05-01","v":19618.76},{"f":"2025-06-01","v":17750.14},{"f":"2025-07-01","v":16636.33},{"f":"2025-08-01","v":12998.47},{"f":"2025-09-01","v":19034.22},{"f":"2025-10-01","v":14510.08},{"f":"2025-11-01","v":17155.12},{"f":"2025-12-01","v":14450.38},{"f":"2026-01-01","v":33832.12},{"f":"2026-02-01","v":35998.5},{"f":"2026-03-01","v":34405.88}]}};
+
+// FAMILY CONFIG
+const FAM_COLORS = {
+  'Filtros y Lubricación':'#2563eb','Filtros':'#3b82f6',
+  'Motor':'#dc2626','Componentes Motor':'#ef4444','Repuestos Motor':'#f87171',
+  'Tren de Rodaje':'#d97706','Transmisión':'#f59e0b','Repuestos Transmisión':'#fbbf24',
+  'Hidráulico':'#7c3aed','Chasis y Estructura':'#8b5cf6',
+  'Eléctrico':'#0891b2','Piezas Eléctricas':'#06b6d4',
+  'Refrigeración':'#059669','Sellos y Juntas':'#10b981',
+  'Repuestos Estructura':'#64748b','Repuestos Generales':'#94a3b8','Repuestos Menores':'#cbd5e1',
+};
+const FAM_ICONS = {
+  'Filtros y Lubricación':'🔧','Filtros':'🔧','Motor':'⚙️','Componentes Motor':'⚙️',
+  'Repuestos Motor':'⚙️','Tren de Rodaje':'🔩','Transmisión':'🔄','Repuestos Transmisión':'🔄',
+  'Hidráulico':'💧','Chasis y Estructura':'🏗','Eléctrico':'⚡','Piezas Eléctricas':'⚡',
+  'Refrigeración':'❄️','Sellos y Juntas':'🔐',
+  'Repuestos Estructura':'📦','Repuestos Generales':'📦','Repuestos Menores':'📦',
+};
+const fc = f => FAM_COLORS[f]||'#64748b';
+const fi = f => FAM_ICONS[f]||'📦';
+
+// STATE
+let D = null;
+let zoomN = 24, chartT = 'ing', artClase = '', artSort = {k:'ing_tot',asc:false};
+let famChartSel = '';
+const zoomOpts = [8,12,16,24,36,44];
+
+// FORMAT
+const fmt = n => n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1000?'$'+(n/1000).toFixed(0)+'K':'$'+Math.round(n);
+const fmtN = n => (+n).toLocaleString('es-PE');
+const pct = n => (n>=0?'+':'')+n.toFixed(0)+'%';
+
+// MODAL
+document.getElementById('BTN_LOAD').onclick = openModal;
+document.getElementById('BTN_LOAD2').onclick = openModal;
+document.getElementById('BTN_PICK').onclick = () => document.getElementById('FILE_IN').click();
+document.getElementById('MODAL_CLOSE').onclick = closeModal;
+document.getElementById('MODAL').onclick = e => { if(e.target===document.getElementById('MODAL')) closeModal(); };
+document.getElementById('FILE_IN').onchange = e => { const f=e.target.files[0]; if(f) loadFile(f); e.target.value=''; };
+const dz = document.getElementById('DROPZONE');
+dz.ondragover = e => { e.preventDefault(); dz.style.background='#fef3c7'; };
+dz.ondragleave = () => dz.style.background='#fffbeb';
+dz.ondrop = e => { e.preventDefault(); dz.style.background='#fffbeb'; const f=e.dataTransfer.files[0]; if(f) loadFile(f); };
+
+function openModal(){ const m=document.getElementById('MODAL'); m.style.display='flex'; m.style.alignItems='center'; m.style.justifyContent='center'; document.getElementById('UPLOAD_MSG').style.display='none'; }
+function closeModal(){ document.getElementById('MODAL').style.display='none'; }
+
+// FILE LOADING
+function toN(v){ return parseFloat(String(v).replace(',','.')) || 0; }
+function toD(v){
+  if(!v) return null;
+  if(typeof v==='number'){ const d=new Date((v-25569)*86400*1000); return isNaN(d)?null:d; }
+  const s=String(v).trim(), m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+  const m2=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m2) return new Date(+m2[1],+m2[2]-1,+m2[3]);
+  const d=new Date(s); return isNaN(d)?null:d;
+}
+
+function loadFile(file){
+  const msg=document.getElementById('UPLOAD_MSG');
+  msg.style.display='block'; msg.textContent='⏳ Procesando: '+file.name;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+  if(ext==='xlsx'||ext==='xls'){
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(json.length>1) parseCSVData(json[0].map(String),json.slice(1),file.name);
+        else{alert('Archivo vacío.');closeModal();}
+      }catch(err){alert('Error Excel: '+err.message);closeModal();}
+    };
+    reader.readAsArrayBuffer(file);
+  }else{
+    reader.onload=e=>{
+      const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
+      if(lines.length<2){alert('CSV vacío.');closeModal();return;}
+      const sep=lines[0].includes(';')?';':lines[0].includes('\t')?'\t':',';
+      const hdr=lines[0].split(sep).map(h=>h.replace(/^["\'"]|["\'"]$/g,'').trim());
+      const rows=lines.slice(1).map(l=>l.split(sep).map(c=>c.replace(/^["\'"]|["\'"]$/g,'').trim()));
+      parseCSVData(hdr,rows,file.name);
+    };
+    reader.readAsText(file,'UTF-8');
+  }
+}
+
+function getMarca(cod){ const m=cod.match(/([A-Z]{2,6})$/); return m?m[1]:'OTRO'; }
+
+function getFamilia(cod){
+  const c=cod.toUpperCase().replace(/[A-Z]+$/,'').trim();
+  const l2=c.replace(/[0-9]/g,'').substring(0,2);
+  const map={
+    '8T':'Sellos y Juntas','8N':'Sellos y Juntas','8S':'Sellos y Juntas',
+    '8R':'Repuestos Motor','8P':'Repuestos Motor','8M':'Repuestos Motor','8K':'Repuestos Motor','8G':'Repuestos Motor','8C':'Repuestos Motor',
+    '1T':'Filtros','1U':'Filtros','1V':'Filtros','1W':'Filtros','1S':'Filtros','1P':'Filtros','1B':'Filtros',
+    '3G':'Transmisión','3F':'Transmisión','3E':'Transmisión','3P':'Transmisión','3S':'Transmisión','3T':'Transmisión','3B':'Transmisión','3H':'Transmisión',
+    '6V':'Motor','6Y':'Motor','6K':'Motor','6N':'Motor','6P':'Motor','6T':'Motor','6I':'Motor','6G':'Motor','6E':'Motor','6F':'Motor','6C':'Motor','6D':'Motor',
+    '7N':'Tren de Rodaje','7G':'Tren de Rodaje','7W':'Tren de Rodaje','7X':'Tren de Rodaje','7Y':'Tren de Rodaje','7C':'Tren de Rodaje','7E':'Tren de Rodaje','7F':'Tren de Rodaje','7M':'Tren de Rodaje','7J':'Tren de Rodaje','7K':'Tren de Rodaje','7T':'Tren de Rodaje','7H':'Tren de Rodaje',
+    '9G':'Hidráulico','9H':'Hidráulico','9M':'Hidráulico','9R':'Hidráulico','9W':'Hidráulico','9X':'Hidráulico','9V':'Hidráulico','9N':'Hidráulico','9C':'Hidráulico','9S':'Hidráulico','9T':'Hidráulico','9J':'Hidráulico','9F':'Hidráulico','9K':'Hidráulico','9L':'Hidráulico',
+    '5M':'Eléctrico','5P':'Eléctrico','5S':'Eléctrico','5I':'Eléctrico','5K':'Eléctrico','5H':'Eléctrico','5J':'Eléctrico','5R':'Eléctrico','5T':'Eléctrico','5V':'Eléctrico',
+    '4W':'Chasis y Estructura','4V':'Chasis y Estructura','4N':'Chasis y Estructura','4S':'Chasis y Estructura','4T':'Chasis y Estructura','4P':'Chasis y Estructura','4B':'Chasis y Estructura','4C':'Chasis y Estructura','4F':'Chasis y Estructura','4H':'Chasis y Estructura','4I':'Chasis y Estructura','4J':'Chasis y Estructura','4K':'Chasis y Estructura','4M':'Chasis y Estructura',
+    '2W':'Refrigeración','2V':'Refrigeración','2P':'Refrigeración','2G':'Refrigeración','2H':'Refrigeración','2B':'Refrigeración','2D':'Refrigeración','2L':'Refrigeración','2M':'Refrigeración','2R':'Refrigeración','2S':'Refrigeración',
+  };
+  if(map[l2]) return map[l2];
+  try{const n=parseInt(c.substring(0,4));if(n>=1000&&n<=1999)return 'Filtros y Lubricación';if(n>=2000&&n<=2999)return 'Repuestos Estructura';if(n>=3000&&n<=3999)return 'Componentes Motor';if(n>=4000&&n<=4999)return 'Repuestos Transmisión';if(n>=5000&&n<=5999)return 'Piezas Eléctricas';if(n>=1&&n<=999)return 'Repuestos Menores';}catch(e){}
+  return 'Repuestos Generales';
+}
+
+function parseCSVData(hdr,rawRows,fname){
+  const find=kws=>hdr.find(h=>kws.some(k=>h.toLowerCase().includes(k)));
+  const cF=find(['fecha','date']),cC=find(['código','codigo','code','artículo','sku','item']);
+  const cQ=find(['cantidad','vendida','consumida','qty']),cP=find(['precio','price','unitario']);
+  const cI=find(['ingreso','venta valor','revenue','importe']);
+  const rows=rawRows.map(r=>{const o={};hdr.forEach((h,i)=>o[h]=r[i]!==undefined?r[i]:'');return{f:toD(o[cF]),c:String(o[cC]||'').trim(),q:toN(o[cQ]),p:toN(o[cP]),i:toN(o[cI])};}).filter(r=>r.c&&r.f);
+  if(!rows.length){alert('No se detectaron columnas clave.');closeModal();return;}
+  const maxTs=Math.max(...rows.map(r=>r.f.getTime()));
+  const maxD=new Date(maxTs);
+  const ago=m=>{const d=new Date(maxD);d.setMonth(d.getMonth()-m);return d;};
+  const d6=ago(6),d3=ago(3),d12=ago(12);
+  const cMap={};
+  rows.forEach(r=>{if(!cMap[r.c])cMap[r.c]={ing:0,q:0,ps:[],hist:[]};cMap[r.c].ing+=r.i;cMap[r.c].q+=r.q;if(r.p>0)cMap[r.c].ps.push(r.p);cMap[r.c].hist.push(r);});
+  let items=Object.keys(cMap).map(cod=>{
+    const info=cMap[cod];
+    const ult=new Date(Math.max(...info.hist.map(r=>r.f.getTime())));
+    const ds=Math.round((maxD-ult)/86400000);
+    const u6=info.hist.filter(r=>r.f>=d6).reduce((a,r)=>a+r.q,0);
+    const u3=info.hist.filter(r=>r.f>=d3).reduce((a,r)=>a+r.q,0);
+    const up3=info.hist.filter(r=>r.f>=d6&&r.f<d3).reduce((a,r)=>a+r.q,0);
+    const ing6=info.hist.filter(r=>r.f>=d6).reduce((a,r)=>a+r.i,0);
+    const pr=info.ps.length?info.ps.reduce((a,b)=>a+b)/info.ps.length:0;
+    const pm=u6/6,sr=Math.ceil(pm*2),oc=sr*pr;
+    const acel=up3>0?(u3-up3)/up3*100:0;
+    const tend=up3===0?'NUEVO':u3>up3*1.2?'↑ CRECIENDO':u3<up3*0.8?'↓ BAJANDO':'→ ESTABLE';
+    const ia=acel>=1000?'🔴 IMPORTAR YA':acel>=500?'🟠 IMPORTAR PRONTO':acel>=200?'🟡 AUMENTAR STOCK':'🟢 MONITOREAR';
+    return{cod,clase:'C',familia:getFamilia(cod),marca:getMarca(cod),ing_tot:info.ing,cant_tot:info.q,precio:pr,u6m:u6,ing6m:ing6,u3m:u3,up3m:up3,dias_sin:ds,prom_men:pm,stock_rec:sr,monto_oc:oc,acel_pct:acel,tend,imp_accion:ia,accion_sin:'',n_trans:info.hist.length};
+  }).sort((a,b)=>b.ing_tot-a.ing_tot);
+  const tot=items.reduce((a,c)=>a+c.ing_tot,0);
+  let acum=0;items.forEach(c=>{acum+=c.ing_tot;c.acum=acum/tot*100;c.clase=c.acum<=80?'A':c.acum<=95?'B':'C';c.accion_sin=c.clase==='A'?'REVISAR URGENTE':c.ing_tot>1000?'REVISAR':c.dias_sin>365?'LIQUIDAR':'MONITOREAR';});
+  // Weekly
+  const wMap={};
+  rows.forEach(r=>{const d=new Date(r.f);d.setDate(d.getDate()-d.getDay());const k=d.toISOString().slice(0,10);if(!wMap[k])wMap[k]={f:k,v:0,ing:0,psum:0,pn:0};wMap[k].v+=r.q;wMap[k].ing+=r.i;if(r.p>0){wMap[k].psum+=r.p;wMap[k].pn++;}});
+  const weeks=Object.keys(wMap).sort().map(k=>{const w=wMap[k];w.pr=w.pn?w.psum/w.pn:0;return w;});
+  for(let i=0;i<weeks.length;i++){const prev=weeks.slice(Math.max(0,i-3),i).map(x=>x.v);weeks[i].pe=prev.length?Math.round(prev.reduce((a,b)=>a+b)/prev.length):weeks[i].v;weeks[i].pf=Math.round(weeks[i].pe*1.05);}
+  let stk=8000;weeks.forEach(w=>{const pp=stk<w.pf*0.5?Math.round(w.pf*1.2):Math.round(w.pf*0.3);stk=Math.max(0,stk-w.v+pp);w.inv=stk;w.pp=pp;});
+  // Fam chart
+  const famMonthly={};
+  rows.forEach(r=>{const f=getFamilia(r.c);const k=r.f.getFullYear()+'-'+String(r.f.getMonth()+1).padStart(2,'0');if(!famMonthly[f])famMonthly[f]={};if(!famMonthly[f][k])famMonthly[f][k]=0;famMonthly[f][k]+=r.i;});
+  const fam_chart={};
+  const topFams=Object.entries(Object.fromEntries(Object.entries(famMonthly).map(([f,mv])=>[f,Object.values(mv).reduce((a,b)=>a+b,0)]))).sort((a,b)=>b[1]-a[1]).slice(0,6).map(x=>x[0]);
+  topFams.forEach(f=>{const mv=famMonthly[f];const months=Object.keys(mv).sort().slice(-12);fam_chart[f]=months.map(m=>({f:m+'-01',v:Math.round(mv[m])}));});
+  const famIng={};items.forEach(i=>{famIng[i.familia]=(famIng[i.familia]||0)+i.ing_tot;});
+  D={
+    items,weeks:weeks.slice(-52),
+    kpis:{
+      total_ing:Math.round(tot),total_art:items.length,
+      clA:items.filter(c=>c.clase==='A').length,clB:items.filter(c=>c.clase==='B').length,clC:items.filter(c=>c.clase==='C').length,
+      sin_mov:items.filter(c=>c.dias_sin>90).length,imp_urg:items.filter(c=>c.acel_pct>=200).length,
+      familias:[...new Set(items.map(i=>i.familia))].sort(),marcas:[...new Set(items.map(i=>i.marca))].sort(),
+      f_ini:new Date(Math.min(...rows.map(r=>r.f.getTime()))).toISOString().slice(0,10),f_fin:maxD.toISOString().slice(0,10),
+      ing_clA:Math.round(items.filter(c=>c.clase==='A').reduce((a,c)=>a+c.ing_tot,0)),
+      ing_clB:Math.round(items.filter(c=>c.clase==='B').reduce((a,c)=>a+c.ing_tot,0)),
+      ing_clC:Math.round(items.filter(c=>c.clase==='C').reduce((a,c)=>a+c.ing_tot,0)),
+      fam_ingresos:Object.fromEntries(Object.entries(famIng).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,Math.round(v)])),
+    },
+    fam_chart
+  };
+  closeModal();
+  document.getElementById('STAT').textContent='✅ '+items.length.toLocaleString()+' artículos · '+fname;
+  document.getElementById('STAT').style.color='#16a34a';
+  document.getElementById('NODATA').style.display='none';
+  initUI();
+}
+
+// INIT WITH RAW DATA
+window.onload = function(){
+  D={
+    items:RAW.items.map(r=>({...r,u3m:r.u3m||0,up3m:r.up3m||0,acel_pct:r.acel_pct||0,imp_accion:r.imp_accion||'🟢 MONITOREAR',accion_sin:r.accion_sin||'MONITOREAR'})),
+    weeks:RAW.weeks, kpis:RAW.kpis, fam_chart:RAW.fam_chart
+  };
+  document.getElementById('STAT').textContent='✅ '+D.kpis.total_art.toLocaleString()+' artículos · Peru Tractor BASE';
+  document.getElementById('STAT').style.color='#16a34a';
+  document.getElementById('NODATA').style.display='none';
+  initUI();
+};
+
+function initUI(){
+  populateSelects();
+  renderDashboard();
+  renderFamCards();
+  renderArt();
+  renderPlanTable();
+  renderMainChart();
+  renderRPanel('kpi');
+  renderImp();
+  renderSin();
+  renderRotacion();
+}
+
+function populateSelects(){
+  const K=D.kpis;
+  const famOpts=K.familias.map(f=>`<option value="${f}">${fi(f)} ${f}</option>`).join('');
+  const marcaOpts=(K.marcas||[...new Set(D.items.map(i=>i.marca))].sort()).map(m=>`<option value="${m}">${m}</option>`).join('');
+  ['ART_FAM','IMP_FAM','SIN_FAM'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Todas las familias</option>'+famOpts;});
+  ['ART_MARCA','IMP_MARCA','SIN_MARCA'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Todas las marcas</option>'+marcaOpts;});
+  const sel=document.getElementById('FAM_SEL');
+  if(sel) sel.innerHTML='<option value="">Seleccionar...</option>'+Object.keys(D.fam_chart).map(f=>`<option value="${f}">${f}</option>`).join('');
+  // Fam chart buttons
+  const fb=document.getElementById('FAM_BTNS');
+  if(fb) fb.innerHTML=Object.keys(D.fam_chart).map(f=>`<button onclick="setFamChart('${f}')" style="padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${fc(f)};background:#fff;color:${fc(f)};transition:all .15s;" onmouseover="this.style.background='${fc(f)}';this.style.color='#fff'" onmouseout="this.style.background='#fff';this.style.color='${fc(f)}'">${f.split(' ')[0]}</button>`).join('');
+}
+
+// DASHBOARD
+function renderDashboard(){
+  const K=D.kpis;
+  document.getElementById('k-ing').textContent=fmt(K.total_ing);
+  document.getElementById('k-ing-s').textContent=K.f_ini+' → '+K.f_fin;
+  document.getElementById('k-art').textContent=K.total_art.toLocaleString();
+  document.getElementById('k-art-s').textContent=K.familias.length+' familias';
+  document.getElementById('k-a').textContent=K.clA.toLocaleString();
+  document.getElementById('k-a-s').textContent=fmt(K.ing_clA);
+  document.getElementById('k-sin').textContent=K.sin_mov.toLocaleString();
+  document.getElementById('k-imp').textContent=K.imp_urg.toLocaleString();
+  renderFamBars();
+  renderABC();
+  renderTopArt();
+  setFamChart(Object.keys(D.fam_chart)[0]||'');
+}
+
+function renderFamBars(){
+  const famIng=D.kpis.fam_ingresos||{};
+  const entries=Object.entries(famIng).slice(0,12);
+  const maxV=entries[0]?.[1]||1;
+  document.getElementById('FAM_BARS').innerHTML=entries.map(([f,ing])=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer;" onclick="filterToFam('${f}')">
+      <div style="font-size:14px;width:20px;flex-shrink:0;">${fi(f)}</div>
+      <div style="font-size:11.5px;color:#374151;width:155px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f}</div>
+      <div class="pbar" style="flex:1;"><div class="pbar-fill" style="width:${(ing/maxV*100).toFixed(1)}%;background:${fc(f)};"></div></div>
+      <div style="font-size:11.5px;font-weight:700;color:${fc(f)};width:52px;text-align:right;flex-shrink:0;">${fmt(ing)}</div>
+    </div>`).join('');
+}
+
+function renderABC(){
+  const K=D.kpis;
+  const rows=[
+    {c:'A',count:K.clA,ing:K.ing_clA,color:'#16a34a',desc:'Alta rotación — reponer siempre',bg:'#dcfce7',border:'#86efac'},
+    {c:'B',count:K.clB,ing:K.ing_clB,color:'#2563eb',desc:'Media rotación — reponer cuando baje',bg:'#dbeafe',border:'#93c5fd'},
+    {c:'C',count:K.clC,ing:K.ing_clC,color:'#94a3b8',desc:'Baja rotación — revisar',bg:'#f3f4f6',border:'#e2e8f0'},
+  ];
+  const tot=K.total_ing;
+  document.getElementById('ABC_VIS').innerHTML=rows.map(r=>`
+    <div class="abc-row" style="background:${r.bg}22;border-color:${r.border};" onclick="filterToClase('${r.c}')">
+      <div class="abc-badge" style="background:${r.color};">${r.c}</div>
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:12px;">Clase ${r.c} — ${r.desc}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px;">${r.count.toLocaleString()} artículos · ${fmt(r.ing)}</div>
+        <div class="pbar" style="margin-top:5px;"><div class="pbar-fill" style="width:${(r.ing/tot*100).toFixed(0)}%;background:${r.color};"></div></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-weight:800;font-size:16px;color:${r.color};">${(r.ing/tot*100).toFixed(0)}%</div>
+        <div style="font-size:10px;color:#94a3b8;">${(r.count/K.total_art*100).toFixed(0)}% arts</div>
+      </div>
+    </div>`).join('')+`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;background:#fef2f222;border:1px solid #fecaca;margin-top:4px;">
+      <div style="width:32px;height:32px;border-radius:8px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">⛔</div>
+      <div><div style="font-weight:600;font-size:12px;">Sin movimiento +90 días</div><div style="font-size:11px;color:#dc2626;margin-top:2px;">${K.sin_mov.toLocaleString()} artículos parados</div></div>
+      <div style="margin-left:auto;font-weight:800;font-size:16px;color:#dc2626;">${(K.sin_mov/K.total_art*100).toFixed(0)}%</div>
+    </div>`;
+}
+
+function renderTopArt(){
+  document.getElementById('TOP_ART').innerHTML=D.items.slice(0,8).map((r,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:${i<7?'1px solid #f1f5f9':'none'};">
+      <div style="width:22px;height:22px;border-radius:6px;background:${i<3?'#fef3c7':'#f1f5f9'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${i<3?'#92400e':'#64748b'};flex-shrink:0;">${i+1}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:monospace;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;">${r.cod}</div>
+        <div style="font-size:10px;color:${fc(r.familia)};margin-top:1px;">${fi(r.familia)} ${r.familia}</div>
+      </div>
+      <span class="badge b${r.clase}">${r.clase}</span>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:12px;font-weight:700;color:#16a34a;">${fmt(r.ing6m)}</div>
+        <div style="font-size:10px;color:#64748b;">6m</div>
+      </div>
+    </div>`).join('');
+}
+
+// FAM CHART
+let famChartInstance = null;
+function setFamChart(f){
+  famChartSel=f;
+  document.getElementById('FAM_SEL').value=f;
+  renderFamChart();
+}
+function renderFamChart(){
+  const f=document.getElementById('FAM_SEL').value||famChartSel;
+  const data=D.fam_chart[f]||[];
+  const cvs=document.getElementById('FAM_CHART');
+  const wrap=cvs.parentElement;
+  cvs.width=wrap.clientWidth||400; cvs.height=140;
+  const ctx=cvs.getContext('2d');
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  if(!data.length) return;
+  const W=cvs.width,H=140,pad={l:50,r:12,t:10,b:24};
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const vals=data.map(d=>d.v);
+  const mn=Math.min(...vals),mx=Math.max(...vals)||1;
+  const color=fc(f);
+  const xi=i=>pad.l+i/(Math.max(data.length-1,1))*cW;
+  const yv=v=>pad.t+cH-(v-mn)/(mx-mn||1)*cH*0.85-cH*0.05;
+  // Fill
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,color+'40'); grad.addColorStop(1,color+'05');
+  ctx.beginPath(); ctx.moveTo(xi(0),yv(vals[0]));
+  vals.forEach((v,i)=>i>0&&ctx.lineTo(xi(i),yv(v)));
+  ctx.lineTo(W-pad.r,H-pad.b); ctx.lineTo(pad.l,H-pad.b); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  // Line
+  ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.setLineDash([]);
+  vals.forEach((v,i)=>i===0?ctx.moveTo(xi(i),yv(v)):ctx.lineTo(xi(i),yv(v)));
+  ctx.stroke();
+  // X labels
+  ctx.fillStyle='#94a3b8'; ctx.font='9px Inter,sans-serif'; ctx.textAlign='center';
+  const step=Math.ceil(data.length/5);
+  data.forEach((d,i)=>{if(i%step===0)ctx.fillText(d.f.slice(5,7)+'/'+d.f.slice(2,4),xi(i),H-6);});
+  // Y labels
+  ctx.textAlign='right'; ctx.fillStyle='#94a3b8'; ctx.font='9px Inter,sans-serif';
+  for(let g=0;g<=3;g++){const v=mn+(mx-mn)*g/3;ctx.fillText(fmt(v),pad.l-4,yv(v)+3);}
+  // Last dot
+  const last=vals[vals.length-1];
+  ctx.beginPath(); ctx.arc(xi(vals.length-1),yv(last),4,0,Math.PI*2);
+  ctx.fillStyle=color; ctx.fill();
+}
+
+// FAM CARDS
+function renderFamCards(){
+  const famIng=D.kpis.fam_ingresos||{};
+  const maxV=Object.values(famIng)[0]||1;
+  document.getElementById('FAM_CARDS').innerHTML=Object.entries(famIng).map(([fam,ing])=>{
+    const items=D.items.filter(i=>i.familia===fam);
+    const clA=items.filter(i=>i.clase==='A').length;
+    const sin=items.filter(i=>i.dias_sin>90).length;
+    const color=fc(fam);
+    return `<div class="fam-card" onclick="filterToFam('${fam}')" style="border-color:${color}33;" onmouseover="this.style.boxShadow='0 4px 16px ${color}22'" onmouseout="this.style.boxShadow=''">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div class="fam-icon" style="background:${color}18;">${fi(fam)}</div>
+        <div style="font-weight:700;font-size:13px;line-height:1.3;">${fam}</div>
+      </div>
+      <div style="font-weight:800;font-size:20px;color:${color};">${fmt(ing)}</div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px;">${items.length} artículos · ${clA} clase A · ${sin} parados</div>
+      <div class="pbar" style="margin-top:10px;"><div class="pbar-fill" style="width:${(ing/maxV*100).toFixed(0)}%;background:${color};"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ART TABLE
+let _artRows=[];
+function getFiltered(famId,marcaId){
+  const fam=document.getElementById(famId)?.value||'';
+  const marca=document.getElementById(marcaId)?.value||'';
+  const hideSin=document.getElementById('TGL_SIN').classList.contains('on');
+  const hideC=document.getElementById('TGL_C').classList.contains('on');
+  let r=[...D.items];
+  if(fam) r=r.filter(i=>i.familia===fam);
+  if(marca) r=r.filter(i=>i.marca===marca);
+  if(hideSin) r=r.filter(i=>i.dias_sin<=90);
+  if(hideC) r=r.filter(i=>i.clase!=='C');
+  return r;
+}
+function renderArt(){
+  const q=document.getElementById('ART_SEARCH').value.toLowerCase();
+  let rows=getFiltered('ART_FAM','ART_MARCA');
+  if(artClase) rows=rows.filter(i=>i.clase===artClase);
+  if(q) rows=rows.filter(i=>i.cod.toLowerCase().includes(q)||i.familia.toLowerCase().includes(q)||i.marca.toLowerCase().includes(q));
+  rows.sort((a,b)=>artSort.asc?(a[artSort.k]>b[artSort.k]?1:-1):(a[artSort.k]<b[artSort.k]?1:-1));
+  _artRows=rows;
+  const tbody=document.getElementById('ART_BODY');
+  tbody.innerHTML=rows.slice(0,300).map(r=>{
+    const dc=r.dias_sin>365?'color:#dc2626':r.dias_sin>90?'color:#d97706':'color:#16a34a';
+    const tc=r.tend?.includes('CRECIENDO')?'class="trend-up"':r.tend?.includes('BAJANDO')?'class="trend-dn"':'class="trend-st"';
+    return `<tr>
+      <td style="font-family:monospace;font-weight:700;">${r.cod}</td>
+      <td><span class="bfam" style="background:${fc(r.familia)}18;color:${fc(r.familia)};">${fi(r.familia)} ${r.familia}</span></td>
+      <td><span class="bmarca">${r.marca}</span></td>
+      <td><span class="badge b${r.clase}">${r.clase}</span></td>
+      <td style="color:#16a34a;font-weight:700;">${fmt(r.ing_tot)}</td>
+      <td>${fmtN(r.u6m)}</td>
+      <td style="color:#16a34a;">${fmt(r.ing6m)}</td>
+      <td>$${r.precio.toFixed(2)}</td>
+      <td ${tc}>${r.tend}</td>
+      <td>${r.prom_men.toFixed(1)}</td>
+      <td style="font-weight:700;">${fmtN(r.stock_rec)}</td>
+      <td style="color:#2563eb;font-weight:600;">${fmt(r.monto_oc)}</td>
+      <td style="font-weight:600;${dc}">${r.dias_sin}d</td>
+    </tr>`;
+  }).join('');
+  const foot=document.getElementById('ART_FOOT');
+  if(foot) foot.textContent='Mostrando '+Math.min(rows.length,300)+' de '+rows.length+' artículos · Ingresos filtrados: '+fmt(rows.reduce((a,i)=>a+i.ing_tot,0));
+}
+function sortArt(k){if(artSort.k===k)artSort.asc=!artSort.asc;else{artSort.k=k;artSort.asc=false;}renderArt();}
+function setClase(c,el){artClase=c;document.querySelectorAll('.vtab').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderArt();}
+function filterToFam(f){document.getElementById('ART_FAM').value=f;showTab('articulos',document.querySelectorAll('.ntab')[2]);renderArt();}
+function filterToClase(c){setClase(c,null);showTab('articulos',document.querySelectorAll('.ntab')[2]);}
+
+// ROT TABLE (for OC section in planificacion)
+function renderRotacion(){}
+
+// IMP TABLE
+function renderImp(){
+  const rows=getFiltered('IMP_FAM','IMP_MARCA').filter(i=>i.acel_pct>=200).sort((a,b)=>b.acel_pct-a.acel_pct);
+  document.getElementById('IMP_BADGE').textContent=rows.length+' artículos';
+  document.getElementById('IMP_BODY').innerHTML=rows.slice(0,200).map((r,i)=>{
+    const ac=r.acel_pct>=1000?'bimp1':r.acel_pct>=500?'bimp2':r.acel_pct>=200?'bimp3':'bimp4';
+    const gc=r.acel_pct>=1000?'#dc2626':r.acel_pct>=500?'#d97706':'#16a34a';
+    return `<tr>
+      <td style="color:#94a3b8;font-weight:700;">${i+1}</td>
+      <td style="font-family:monospace;font-weight:700;">${r.cod}</td>
+      <td><span class="bfam" style="background:${fc(r.familia)}18;color:${fc(r.familia)};">${fi(r.familia)} ${r.familia}</span></td>
+      <td><span class="bmarca">${r.marca}</span></td>
+      <td><span class="badge b${r.clase}">${r.clase}</span></td>
+      <td style="color:#64748b;">${r.up3m}</td>
+      <td style="font-weight:700;">${r.u3m}</td>
+      <td style="color:${gc};font-weight:700;">${pct(r.acel_pct)}</td>
+      <td>$${r.precio.toFixed(2)}</td>
+      <td style="color:#2563eb;font-weight:600;">${fmt(r.monto_oc)}</td>
+      <td><span class="badge ${ac}">${r.imp_accion}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// SIN TABLE
+function renderSin(){
+  const rows=getFiltered('SIN_FAM','SIN_MARCA').filter(i=>i.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin);
+  document.getElementById('SIN_BADGE').textContent=rows.length+' artículos';
+  document.getElementById('sin-tot').textContent=rows.length.toLocaleString();
+  document.getElementById('sin-a').textContent=rows.filter(r=>r.clase==='A').length.toLocaleString();
+  document.getElementById('sin-liq').textContent=rows.filter(r=>r.dias_sin>365).length.toLocaleString();
+  document.getElementById('sin-val').textContent=fmt(rows.reduce((a,r)=>a+r.ing_tot,0));
+  document.getElementById('sin-oc').textContent=fmt(rows.reduce((a,r)=>a+r.monto_oc,0));
+  const now=new Date();
+  document.getElementById('SIN_BODY').innerHTML=rows.slice(0,300).map((r,i)=>{
+    const ultima=new Date(now.getTime()-r.dias_sin*86400000).toLocaleDateString('es-PE');
+    const ac=r.accion_sin==='REVISAR URGENTE'?'brep':r.accion_sin==='REVISAR'?'brev':r.accion_sin==='LIQUIDAR'?'bliq':'bmon';
+    const dc=r.dias_sin>365?'color:#dc2626':r.dias_sin>90?'color:#d97706':'color:#16a34a';
+    return `<tr style="background:${r.clase==='A'?'#fffbeb':''}">
+      <td style="color:#94a3b8;font-weight:700;">${i+1}</td>
+      <td style="font-family:monospace;font-weight:700;">${r.cod}</td>
+      <td><span class="bfam" style="background:${fc(r.familia)}18;color:${fc(r.familia)};">${fi(r.familia)} ${r.familia}</span></td>
+      <td><span class="bmarca">${r.marca}</span></td>
+      <td><span class="badge b${r.clase}">${r.clase}</span></td>
+      <td style="font-weight:700;${dc}">${r.dias_sin}d</td>
+      <td style="color:#64748b;">${ultima}</td>
+      <td style="color:#16a34a;font-weight:600;">${fmt(r.ing_tot)}</td>
+      <td>$${r.precio.toFixed(2)}</td>
+      <td style="font-weight:700;">${r.stock_rec}</td>
+      <td style="color:#2563eb;">${fmt(r.monto_oc)}</td>
+      <td><span class="badge ${ac}">${r.accion_sin}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// PLAN TABLE
+function getWeeks(){ return D.weeks.slice(-zoomN); }
+function renderPlanTable(){
+  const ws=getWeeks();
+  const head=document.getElementById('PLAN_HEAD');
+  const body=document.getElementById('PLAN_BODY');
+  head.innerHTML='<th>Métrica / Semana</th>'+ws.map(w=>`<th style="text-align:right;">${w.f.slice(5)}</th>`).join('');
+  const useIng=chartT==='ing';
+  const rows=[
+    {lbl:'Ventas reales',k:useIng?'ing':'v',color:'#0f172a',fw:'600',bg:''},
+    {lbl:'Pronóst. estadístico',k:'pe',color:'#dc2626',fw:'400',bg:'fc'},
+    {lbl:'Pronóst. final',k:'pf',color:'#d97706',fw:'700',bg:'fc'},
+    {lbl:'Precio promedio',k:'pr',color:'#94a3b8',fw:'400',bg:'',fmt:v=>'$'+v.toFixed(2)},
+    {lbl:'Ingresos',k:'ing',color:'#16a34a',fw:'700',bg:'',fmt:v=>v>0?fmt(v):''},
+    {lbl:'Inv. proyectado',k:'inv',color:'#2563eb',fw:'400',bg:''},
+    {lbl:'Plan de pedidos',k:'pp',color:'#7c3aed',fw:'700',bg:'pc'},
+  ];
+  body.innerHTML=rows.map(r=>`<tr>
+    <td>${r.lbl}</td>
+    ${ws.map(w=>`<td class="${r.bg}" style="text-align:right;color:${r.color};font-weight:${r.fw};">${r.fmt?r.fmt(w[r.k]||0):Math.round(w[r.k]||0).toLocaleString()}</td>`).join('')}
+  </tr>`).join('');
+}
+
+// MAIN CHART
+function renderMainChart(){
+  const cvs=document.getElementById('MAIN_CHART');
+  const wrap=cvs.parentElement;
+  cvs.width=wrap.clientWidth||700; cvs.height=200;
+  const ctx=cvs.getContext('2d');
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  const ws=getWeeks(),W=cvs.width,H=200;
+  const pad={l:60,r:16,t:14,b:28};
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const useIng=chartT==='ing';
+  const series=[
+    {k:useIng?'ing':'v',color:'#94a3b8',dash:[],lw:2},
+    {k:'inv',color:'#16a34a',dash:[4,3],lw:1.5},
+    {k:'pf',color:'#ef4444',dash:[5,3],lw:1.5},
+    {k:'pp',color:'#d97706',dash:[3,3],lw:1.5},
+  ];
+  const all=ws.flatMap(w=>series.map(s=>w[s.k]||0));
+  const maxV=Math.max(...all)*1.1||1;
+  const xi=i=>pad.l+i/(Math.max(ws.length-1,1))*cW;
+  const yv=v=>pad.t+cH-(v/maxV)*cH;
+  ctx.strokeStyle='#f1f5f9';ctx.lineWidth=1;
+  for(let g=0;g<=4;g++){const y=pad.t+g/4*cH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
+  ctx.fillStyle='#94a3b8';ctx.font='10px Inter,sans-serif';ctx.textAlign='right';
+  for(let g=0;g<=4;g++){const v=maxV*(4-g)/4;ctx.fillText(useIng?(v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+Math.round(v)):Math.round(v).toLocaleString(),pad.l-5,pad.t+g/4*cH+3);}
+  ctx.textAlign='center';ctx.fillStyle='#94a3b8';ctx.font='9px Inter,sans-serif';
+  const step=Math.ceil(ws.length/8);
+  ws.forEach((w,i)=>{if(i%step===0)ctx.fillText(w.f.slice(5),xi(i),H-6);});
+  series.forEach(s=>{
+    ctx.beginPath();ctx.strokeStyle=s.color;ctx.lineWidth=s.lw;ctx.setLineDash(s.dash);
+    ws.forEach((w,i)=>{const v=w[s.k]||0;i===0?ctx.moveTo(xi(i),yv(v)):ctx.lineTo(xi(i),yv(v));});
+    ctx.stroke();ctx.setLineDash([]);
+    const last=ws[ws.length-1];
+    ctx.beginPath();ctx.arc(xi(ws.length-1),yv(last[s.k]||0),3,0,Math.PI*2);
+    ctx.fillStyle=s.color;ctx.fill();
+  });
+}
+
+// RIGHT PANEL
+function setRTab(t,el){
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('on'));
+  if(el)el.classList.add('on');
+  renderRPanel(t);
+}
+function renderRPanel(t){
+  const K=D.kpis;
+  const rc=document.getElementById('RPANEL_CONTENT');
+  if(t==='kpi') rc.innerHTML=`
+    <div class="kcard"><div class="kcard-t">Ingresos Totales</div><div class="kcard-v">$${(K.total_ing/1e6).toFixed(2)}M</div><div class="kcard-s">${K.f_ini} → ${K.f_fin}</div></div>
+    <div class="kcard"><div class="kcard-t">Artículos únicos</div><div class="kcard-v">${K.total_art.toLocaleString()}</div><div class="kcard-s">${K.familias?.length||0} familias</div></div>
+    <div class="kcard"><div class="kcard-t">Clase A (80% ingresos)</div><div class="kcard-v" style="color:#16a34a;">${K.clA.toLocaleString()}</div><div class="kcard-s">${fmt(K.ing_clA)}</div></div>
+    <div class="kcard"><div class="kcard-t">Sin Movimiento +90d</div><div class="kcard-v" style="color:#dc2626;">${K.sin_mov.toLocaleString()}</div></div>
+    <div class="kcard"><div class="kcard-t">Importar Urgente</div><div class="kcard-v" style="color:#7c3aed;">${K.imp_urg.toLocaleString()}</div></div>`;
+  else if(t==='prev') rc.innerHTML=`
+    ${[['Activo',['Heredado (Sí)','Sí','No']],['Enfoque',['De abajo hacia arriba','Top-down']],['Tipo de modelo',['Selección automática','Media móvil','Holt-Winters']],['Ignorar ventas cero',['Heredado (No)','Sí']],['Ventana',['Heredado (Sí)','4 sem.','8 sem.','12 sem.']],['Detectar outliers',['Heredado (Sí)','No']],['Días festivos',['Ninguno','Perú','Chile','Brasil']]].map(([l,opts])=>`<div class="rlabel">${l}</div><select class="rselect">${opts.map(o=>`<option>${o}</option>`).join('')}</select>`).join('')}`;
+  else rc.innerHTML=`
+    ${[['Nivel de servicio',['95%','90%','98%']],['Lead time',['30 días','45 días','60 días','90 días']],['Stock de seguridad',['2 semanas','4 semanas','8 semanas']],['Mínimo de orden',['1','5','10']]].map(([l,opts])=>`<div class="rlabel">${l}</div><select class="rselect">${opts.map(o=>`<option>${o}</option>`).join('')}</select>`).join('')}`;
+}
+
+// CONTROLS
+function showTab(id,el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+  if(el)el.classList.add('on');
+  if(id==='planificacion'){setTimeout(()=>{renderMainChart();renderFamChart();},50);}
+}
+function setChartType(t,el){
+  chartT=t;
+  document.querySelectorAll('.vtab,.ctab').forEach(b=>{if(b.textContent.includes('Ing')||b.textContent.includes('Cant'))b.classList.remove('on');});
+  if(el)el.classList.add('on');
+  renderPlanTable();renderMainChart();
+}
+function zoom(d){
+  const i=zoomOpts.indexOf(zoomN);
+  const ni=Math.max(0,Math.min(zoomOpts.length-1,i+d));
+  zoomN=zoomOpts[ni];
+  document.getElementById('ZOOM_LBL').textContent=zoomN+' sem.';
+  renderPlanTable();renderMainChart();
+}
+window.addEventListener('resize',()=>{if(D){renderMainChart();renderFamChart();}});
+
+// EXPORTS
+function dlCSV(rows,fname){
+  if(!rows?.length){alert('No hay datos.');return;}
+  const keys=Object.keys(rows[0]);
+  const csv=[keys.join(','),...rows.map(r=>keys.map(k=>`"${String(r[k]||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='TractorPlan_'+fname+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function dlAll(){
+  if(!D){alert('Primero carga tu base de datos.');return;}
+  const wb=XLSX.utils.book_new();
+  const add=(rows,sheet)=>{if(rows.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),sheet);};
+  add(D.items.map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total:r.ing_tot.toFixed(2),Unid_6m:r.u6m,Ing_6m:r.ing6m.toFixed(2),Precio:r.precio.toFixed(2),Tendencia:r.tend,Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Dias_Sin:r.dias_sin})),'ABC Completo');
+  add(D.items.filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin:r.dias_sin,Ing_Hist:r.ing_tot.toFixed(2),Accion:r.accion_sin})),'Sin Movimiento');
+  add(D.items.filter(r=>r.acel_pct>=200).sort((a,b)=>b.acel_pct-a.acel_pct).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Crecimiento_pct:r.acel_pct.toFixed(1),Curr_3m:r.u3m,Prioridad:r.imp_accion})),'Importar Urgente');
+  add(D.items.filter(r=>r.u6m>0).sort((a,b)=>b.ing6m-a.ing6m).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Unid_6m:r.u6m,Ing_6m:r.ing6m.toFixed(2),Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Tendencia:r.tend})),'Rotacion');
+  XLSX.writeFile(wb,'TractorPlan_COMPLETO_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function dlSection(tipo){
+  if(!D){alert('Primero carga tu base de datos.');return;}
+  let rows,fname;
+  if(tipo==='abc'){rows=D.items.map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total:r.ing_tot.toFixed(2),Unid_Total:r.cant_tot,Precio:r.precio.toFixed(2),Dias_Sin:r.dias_sin}));fname='ABC';}
+  else if(tipo==='stock0'){rows=D.items.filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin:r.dias_sin,Ing_Hist:r.ing_tot.toFixed(2),Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Accion:r.accion_sin}));fname='Stock0';}
+  else if(tipo==='art'){rows=_artRows.map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total:r.ing_tot.toFixed(2),Ing_6m:r.ing6m.toFixed(2),Unid_6m:r.u6m,Precio:r.precio.toFixed(2),Tendencia:r.tend,Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Dias_Sin:r.dias_sin}));fname='Articulos';}
+  else if(tipo==='imp'){rows=getFiltered('IMP_FAM','IMP_MARCA').filter(r=>r.acel_pct>=200).sort((a,b)=>b.acel_pct-a.acel_pct).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Prev_3m:r.up3m,Curr_3m:r.u3m,Crecimiento_pct:r.acel_pct.toFixed(1),Precio:r.precio.toFixed(2),Monto_OC:r.monto_oc.toFixed(2),Prioridad:r.imp_accion}));fname='Importar';}
+  else{rows=getFiltered('SIN_FAM','SIN_MARCA').filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin:r.dias_sin,Ing_Hist:r.ing_tot.toFixed(2),Accion:r.accion_sin}));fname='SinMovimiento';}
+  dlCSV(rows,fname);
+}
+</script>
+</body>
+</html>
