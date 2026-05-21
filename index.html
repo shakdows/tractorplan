@@ -212,8 +212,55 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
 
 <!-- FAMILIAS -->
 <div class="pg" id="PAGE_fam">
-  <div class="fb"><h2>&#128194; Familias de Producto</h2></div>
+  <div class="fb">
+    <h2>&#128194; Familias de Producto</h2>
+    <span id="FAM_SELECTED_LABEL" style="font-size:12px;color:var(--t3);display:none">Clic en una familia para ver sus articulos</span>
+  </div>
   <div class="ga" id="FAM_CARDS"></div>
+  <!-- EXPANDABLE PANEL -->
+  <div id="FAM_DETAIL_PANEL" style="display:none;background:var(--w);border:1px solid var(--bd);border-radius:9px;margin-top:4px;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="FAM_DETAIL_ICON" style="font-size:20px"></span>
+        <div>
+          <div id="FAM_DETAIL_TITLE" style="font-size:14px;font-weight:700"></div>
+          <div id="FAM_DETAIL_STATS" style="font-size:11px;color:var(--t3);margin-top:1px"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="vt" id="FAM_DETAIL_TABS">
+          <button class="vb on">Todos</button>
+          <button class="vb">A</button>
+          <button class="vb">B</button>
+          <button class="vb">C</button>
+        </div>
+        <button id="FAM_DL_BTN" class="btn bg sm">&#11015; CSV</button>
+        <button onclick="closeFamDetail()" class="btn bg sm" style="padding:5px 9px">&#10005;</button>
+      </div>
+    </div>
+    <div style="overflow:auto;max-height:420px">
+      <table id="FAM_DETAIL_TABLE" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">#</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Codigo</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Nombre del Producto</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Marca</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Clase</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Ing. Total</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Ing. 6m</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Prom/mes</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Precio</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Tendencia</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Stock Rec.</th>
+            <th style="background:var(--b3);padding:8px 11px;text-align:left;font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap;position:sticky;top:0">Dias sin mov.</th>
+          </tr>
+        </thead>
+        <tbody id="FAM_DETAIL_BODY"></tbody>
+      </table>
+    </div>
+    <div id="FAM_DETAIL_FOOT" style="padding:8px 11px;background:var(--b3);font-size:11px;color:var(--t3);border-top:1px solid var(--bd)"></div>
+  </div>
 </div>
 
 <!-- ARTICULOS -->
@@ -890,9 +937,11 @@ function filterToClase(c) {
   showPage('art');
 }
 function filterToFam(f) {
-  document.getElementById('ART_FAM').value = f;
-  renderArt();
-  showPage('art');
+  // From dashboard: go to Familias page and open the detail panel
+  showPage('fam');
+  document.querySelectorAll('.nt').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('NAV_fam').classList.add('on');
+  setTimeout(function(){ openFamDetail(f); }, 100);
 }
 
 // ============================================================
@@ -1003,6 +1052,9 @@ function drawFamChart(f) {
 // ============================================================
 // FAMILY CARDS
 // ============================================================
+var famDetailCls = '';
+var famDetailFam = '';
+
 function renderFamCards() {
   var fi3 = D.kpis.fam_ingresos || {};
   var maxV = Math.max.apply(null, Object.values(fi3)) || 1;
@@ -1012,18 +1064,120 @@ function renderFamCards() {
     var cA = its.filter(function(i){return i.clase==='A';}).length;
     var sin = its.filter(function(i){return i.dias_sin>90;}).length;
     var color = famColor(f);
-    return '<div style="background:var(--w);border:1px solid '+color+'33;border-radius:9px;padding:14px;cursor:pointer;transition:transform .15s,box-shadow .15s" '
-      +'onclick="filterToFam(\''+f+'\')" '
+    return '<div id="FAMCARD_'+f+'" style="background:var(--w);border:1px solid '+color+'33;border-radius:9px;padding:14px;cursor:pointer;transition:transform .15s,box-shadow .15s" '
+      +'onclick="openFamDetail(\''+f+'\')" '
       +'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 14px '+color+'22\'" '
       +'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
       +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
       +'<div style="width:34px;height:34px;border-radius:9px;background:'+color+'18;display:flex;align-items:center;justify-content:center;font-size:17px">'+famIcon(f)+'</div>'
-      +'<div style="font-weight:700;font-size:13px;line-height:1.3">'+f+'</div></div>'
+      +'<div style="font-weight:700;font-size:13px;line-height:1.3">'+f+'</div>'
+      +'<span id="FAM_ARROW_'+f+'" style="margin-left:auto;font-size:12px;color:'+color+';display:none">&#9660;</span>'
+      +'</div>'
       +'<div style="font-weight:800;font-size:18px;color:'+color+'">'+fmt(ing)+'</div>'
       +'<div style="font-size:11px;color:var(--t3);margin-top:3px">'+its.length+' articulos \u00B7 '+cA+' clase A \u00B7 '+sin+' parados</div>'
       +'<div class="pb"><div class="pf" style="width:'+(ing/maxV*100).toFixed(0)+'%;background:'+color+'"></div></div>'
       +'</div>';
   }).join('');
+
+  // Wire download button
+  document.getElementById('FAM_DL_BTN').addEventListener('click', function() {
+    if (!famDetailFam) return;
+    var rows = getFamDetailRows();
+    dlCSV(rows, 'Familia_' + famDetailFam);
+  });
+
+  // Wire class filter tabs
+  var tabs = document.querySelectorAll('#FAM_DETAIL_TABS .vb');
+  var cls2 = ['','A','B','C'];
+  tabs.forEach(function(btn, i) {
+    btn.addEventListener('click', function() {
+      tabs.forEach(function(b){b.classList.remove('on');});
+      btn.classList.add('on');
+      famDetailCls = cls2[i];
+      renderFamDetailBody();
+    });
+  });
+}
+
+function getFamDetailRows() {
+  var rows = D.items.filter(function(i){return i.familia===famDetailFam;});
+  if (famDetailCls) rows = rows.filter(function(i){return i.clase===famDetailCls;});
+  rows.sort(function(a,b){return b.ing_tot-a.ing_tot;});
+  return rows;
+}
+
+function openFamDetail(f) {
+  // Highlight selected card
+  var prev = document.getElementById('FAMCARD_' + famDetailFam);
+  if (prev) { prev.style.outline = ''; document.getElementById('FAM_ARROW_'+famDetailFam) && (document.getElementById('FAM_ARROW_'+famDetailFam).style.display='none'); }
+
+  famDetailFam = f;
+  famDetailCls = '';
+
+  // Reset class tabs
+  var tabs = document.querySelectorAll('#FAM_DETAIL_TABS .vb');
+  tabs.forEach(function(b){b.classList.remove('on');}); tabs[0].classList.add('on');
+
+  var color = famColor(f);
+  var card = document.getElementById('FAMCARD_' + f);
+  if (card) { card.style.outline = '2.5px solid ' + color; }
+  var arrow = document.getElementById('FAM_ARROW_' + f);
+  if (arrow) { arrow.style.display = 'inline'; arrow.textContent = '▼'; }
+
+  // Fill header
+  document.getElementById('FAM_DETAIL_ICON').textContent = famIcon(f);
+  document.getElementById('FAM_DETAIL_TITLE').textContent = f;
+  document.getElementById('FAM_DETAIL_TITLE').style.color = color;
+
+  var its = D.items.filter(function(i){return i.familia===f;});
+  var clA = its.filter(function(i){return i.clase==='A';}).length;
+  var sinMov = its.filter(function(i){return i.dias_sin>90;}).length;
+  var totalIng = its.reduce(function(a,i){return a+i.ing_tot;},0);
+  document.getElementById('FAM_DETAIL_STATS').textContent = its.length + ' articulos · ' + clA + ' Clase A · ' + sinMov + ' parados · Total: ' + fmt(totalIng);
+
+  // Show panel and scroll to it
+  var panel = document.getElementById('FAM_DETAIL_PANEL');
+  panel.style.display = 'block';
+  panel.style.borderColor = color + '66';
+
+  renderFamDetailBody();
+
+  setTimeout(function(){
+    panel.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 80);
+}
+
+function renderFamDetailBody() {
+  var rows = getFamDetailRows();
+  var now = new Date();
+  document.getElementById('FAM_DETAIL_BODY').innerHTML = rows.slice(0,300).map(function(r, i) {
+    var tc = r.tend&&r.tend.indexOf('CRECIENDO')>=0?'color:#16a34a;font-weight:700':r.tend&&r.tend.indexOf('BAJANDO')>=0?'color:#dc2626;font-weight:700':'color:var(--t3)';
+    var dc = r.dias_sin>365?'color:#dc2626':r.dias_sin>90?'color:#d97706':'color:#16a34a';
+    return '<tr onclick="openProdModal(\''+r.cod+'\')" style="border-bottom:1px solid #f1f5f9;cursor:pointer" onmouseover="this.style.background=\'#f0f9ff\'" onmouseout="this.style.background=\'\'">'
+      +'<td style="padding:8px 11px;color:var(--t4);font-weight:700">'+(i+1)+'</td>'
+      +'<td style="padding:8px 11px;font-family:monospace;font-weight:700;font-size:11px;white-space:nowrap">'+r.cod+'</td>'
+      +'<td style="padding:8px 11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.nombre+'</td>'
+      +'<td style="padding:8px 11px;white-space:nowrap"><span class="bmk">'+r.marca+'</span></td>'
+      +'<td style="padding:8px 11px;white-space:nowrap"><span class="b'+r.clase+'2">'+r.clase+'</span></td>'
+      +'<td style="padding:8px 11px;color:var(--G);font-weight:700;white-space:nowrap">'+fmt(r.ing_tot)+'</td>'
+      +'<td style="padding:8px 11px;color:var(--G);white-space:nowrap">'+fmt(r.ing6m)+'</td>'
+      +'<td style="padding:8px 11px;font-weight:600;white-space:nowrap">'+r.prom_men.toFixed(1)+'</td>'
+      +'<td style="padding:8px 11px;white-space:nowrap">$'+r.precio.toFixed(2)+'</td>'
+      +'<td style="padding:8px 11px;white-space:nowrap;'+tc+'">'+r.tend+'</td>'
+      +'<td style="padding:8px 11px;font-weight:700;white-space:nowrap">'+r.stock_rec+'</td>'
+      +'<td style="padding:8px 11px;font-weight:600;white-space:nowrap;'+dc+'">'+r.dias_sin+'d</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('FAM_DETAIL_FOOT').textContent = 'Mostrando ' + Math.min(rows.length,300) + ' de ' + rows.length + ' articulos · Ingresos: ' + fmt(rows.reduce(function(a,r){return a+r.ing_tot;},0)) + ' · OC total: ' + fmt(rows.reduce(function(a,r){return a+r.monto_oc;},0));
+}
+
+function closeFamDetail() {
+  document.getElementById('FAM_DETAIL_PANEL').style.display = 'none';
+  var card = document.getElementById('FAMCARD_' + famDetailFam);
+  if (card) card.style.outline = '';
+  var arrow = document.getElementById('FAM_ARROW_' + famDetailFam);
+  if (arrow) arrow.style.display = 'none';
+  famDetailFam = '';
 }
 
 // ============================================================
