@@ -194,6 +194,21 @@ canvas{display:block;}
 
   <!-- DASHBOARD -->
   <div class="view on" id="tab-dashboard">
+    <!-- PANEL DESCARGAS RÁPIDAS -->
+    <div id="DL_PANEL" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#0f172a;">⬇ Descargas Rápidas</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <button class="btn btn-red btn-sm" onclick="dlSection('reponer')">🚨 Reposición Urgente (A+B)</button>
+        <button class="btn btn-blue btn-sm" onclick="dlSection('claseA')">🅐 Solo Clase A</button>
+        <button class="btn btn-amber btn-sm" onclick="dlSection('planOC')">🛒 Plan OC Completo</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('abc')">📊 ABC Completo</button>
+        <button class="btn btn-red btn-sm" onclick="dlSection('stock0')">⛔ Sin Stock / Parados</button>
+        <button class="btn btn-red btn-sm" onclick="dlSection('imp')">🚢 Importar Urgente</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('creciendo')">↑ Demanda Creciendo</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('bajando')">↓ Demanda Bajando</button>
+        <button class="btn btn-green btn-sm" onclick="dlAll()">📥 TODO en Excel (5 hojas)</button>
+      </div>
+    </div>
     <div id="NODATA" class="nodata">
       <span style="font-size:24px;">📊</span>
       <div><div style="font-weight:700;color:#78350f;">Carga tu base de datos para ver el análisis completo</div><div style="font-size:12px;color:#92400e;">Excel (.xlsx) o CSV con tus ventas, movimientos e inventario</div></div>
@@ -254,8 +269,11 @@ canvas{display:block;}
         <button class="vtab" onclick="setClase('C',this)">🅒 C</button>
       </div>
       <div style="margin-left:auto;display:flex;gap:6px;">
-        <button class="btn btn-blue btn-sm" onclick="dlSection('abc')">⬇ ABC</button>
-        <button class="btn btn-red btn-sm" onclick="dlSection('stock0')">⬇ Stock 0</button>
+        <button class="btn btn-red btn-sm" onclick="dlSection('reponer')">🚨 Reponer</button>
+        <button class="btn btn-blue btn-sm" onclick="dlSection('claseA')">🅐 Clase A</button>
+        <button class="btn btn-amber btn-sm" onclick="dlSection('planOC')">🛒 Plan OC</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('abc')">📊 ABC</button>
+        <button class="btn btn-red btn-sm" onclick="dlSection('stock0')">⛔ Sin Stock</button>
         <button class="btn btn-ghost btn-sm" onclick="dlSection('art')">⬇ Vista actual</button>
       </div>
     </div>
@@ -348,7 +366,11 @@ canvas{display:block;}
       <input type="text" class="input-styled" id="IMP_SEARCH" placeholder="🔍 Buscar código..." oninput="renderImp()" style="width:160px;">
       <select class="select-styled" id="IMP_FAM" onchange="renderImp()"><option value="">Todas las familias</option></select>
       <select class="select-styled" id="IMP_MARCA" onchange="renderImp()"><option value="">Todas las marcas</option></select>
-      <div style="margin-left:auto;"><button class="btn btn-red btn-sm" onclick="dlSection('imp')">⬇ CSV Importar Urgente</button></div>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button class="btn btn-red btn-sm" onclick="dlSection('imp')">🚢 Importar Urgente</button>
+        <button class="btn btn-amber btn-sm" onclick="dlSection('creciendo')">↑ Demanda Creciendo</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('bajando')">↓ Demanda Bajando</button>
+      </div>
     </div>
     <div class="legend orange">
       <strong>📖 LEYENDA:</strong>
@@ -376,8 +398,9 @@ canvas{display:block;}
       <select class="select-styled" id="SIN_FAM" onchange="renderSin()"><option value="">Todas las familias</option></select>
       <select class="select-styled" id="SIN_MARCA" onchange="renderSin()"><option value="">Todas las marcas</option></select>
       <div style="margin-left:auto;display:flex;gap:6px;">
-        <button class="btn btn-red btn-sm" onclick="dlSection('stock0')">⬇ CSV Stock 0</button>
-        <button class="btn btn-ghost btn-sm" onclick="dlSection('sin')">⬇ CSV Sin Movimiento</button>
+        <button class="btn btn-red btn-sm" onclick="dlSection('stock0')">⬇ Sin Stock (+90d)</button>
+        <button class="btn btn-ghost btn-sm" onclick="dlSection('sin')">⬇ Sin Movimiento</button>
+        <button class="btn btn-amber btn-sm" onclick="dlSection('reponer')">🚨 Plan Reposición</button>
       </div>
     </div>
     <div class="grid-5" style="margin-bottom:14px;">
@@ -622,6 +645,7 @@ function parseCSVData(hdr,rawRows,fname){
   document.getElementById('STAT').textContent='✅ '+items.length.toLocaleString()+' artículos · '+fname;
   document.getElementById('STAT').style.color='#16a34a';
   document.getElementById('NODATA').style.display='none';
+  const dlp=document.getElementById('DL_PANEL');if(dlp)dlp.style.display='block';
   initUI();
 }
 
@@ -634,6 +658,7 @@ window.onload = function(){
   document.getElementById('STAT').textContent='✅ '+D.kpis.total_art.toLocaleString()+' artículos · Peru Tractor BASE';
   document.getElementById('STAT').style.color='#16a34a';
   document.getElementById('NODATA').style.display='none';
+  const dlp=document.getElementById('DL_PANEL');if(dlp)dlp.style.display='block';
   initUI();
 };
 
@@ -1039,22 +1064,154 @@ function dlCSV(rows,fname){
 function dlAll(){
   if(!D){alert('Primero carga tu base de datos.');return;}
   const wb=XLSX.utils.book_new();
-  const add=(rows,sheet)=>{if(rows.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),sheet);};
-  add(D.items.map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total:r.ing_tot.toFixed(2),Unid_6m:r.u6m,Ing_6m:r.ing6m.toFixed(2),Precio:r.precio.toFixed(2),Tendencia:r.tend,Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Dias_Sin:r.dias_sin})),'ABC Completo');
-  add(D.items.filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin:r.dias_sin,Ing_Hist:r.ing_tot.toFixed(2),Accion:r.accion_sin})),'Sin Movimiento');
-  add(D.items.filter(r=>r.acel_pct>=200).sort((a,b)=>b.acel_pct-a.acel_pct).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Crecimiento_pct:r.acel_pct.toFixed(1),Curr_3m:r.u3m,Prioridad:r.imp_accion})),'Importar Urgente');
-  add(D.items.filter(r=>r.u6m>0).sort((a,b)=>b.ing6m-a.ing6m).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Unid_6m:r.u6m,Ing_6m:r.ing6m.toFixed(2),Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Tendencia:r.tend})),'Rotacion');
+  const add=(rows,sheet)=>{if(rows&&rows.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),sheet);};
+  // Hoja 1: ABC Completo
+  add(D.items.sort((a,b)=>b.ing_tot-a.ing_tot).map(r=>({
+    Código:r.cod,Nombre:getNombre(r.cod),Familia:r.familia,Marca:r.marca,Clase:r.clase,
+    Ing_Total_USD:r.ing_tot.toFixed(2),Unid_Total:r.cant_tot,
+    Ing_6m_USD:r.ing6m.toFixed(2),Precio_USD:r.precio.toFixed(2),
+    Tendencia:r.tend,Stock_Rec_2m:r.stock_rec,Monto_OC_USD:r.monto_oc.toFixed(2),Dias_Sin_Mov:r.dias_sin
+  })),'ABC Completo');
+  // Hoja 2: Reposición urgente (A+B activos)
+  add(D.items.filter(r=>r.u6m>0&&(r.clase==='A'||r.clase==='B')).sort((a,b)=>b.ing6m-a.ing6m).map(r=>({
+    Código:r.cod,Nombre:getNombre(r.cod),Familia:r.familia,Marca:r.marca,Clase:r.clase,
+    Unid_6m:r.u6m,Ing_6m_USD:r.ing6m.toFixed(2),Prom_mensual:r.prom_men.toFixed(1),
+    Stock_Rec_2m:r.stock_rec,Precio_USD:r.precio.toFixed(2),Monto_OC_USD:r.monto_oc.toFixed(2),
+    Tendencia:r.tend,Prioridad:r.clase==='A'?'ALTA':'MEDIA'
+  })),'Reposicion Urgente');
+  // Hoja 3: Sin Stock / Sin movimiento
+  add(D.items.filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin).map(r=>({
+    Código:r.cod,Nombre:getNombre(r.cod),Familia:r.familia,Marca:r.marca,Clase:r.clase,
+    Dias_Sin_Mov:r.dias_sin,Ing_Historico_USD:r.ing_tot.toFixed(2),
+    Precio_USD:r.precio.toFixed(2),Stock_Rec_2m:r.stock_rec,Monto_OC_USD:r.monto_oc.toFixed(2),Accion:r.accion_sin
+  })),'Sin Stock Sin Movimiento');
+  // Hoja 4: Importar urgente
+  add(D.items.filter(r=>r.acel_pct>=200).sort((a,b)=>b.acel_pct-a.acel_pct).map(r=>({
+    Código:r.cod,Nombre:getNombre(r.cod),Familia:r.familia,Marca:r.marca,Clase:r.clase,
+    Unid_Prev_3m:r.up3m,Unid_Curr_3m:r.u3m,Crecimiento_pct:r.acel_pct.toFixed(1),
+    Precio_USD:r.precio.toFixed(2),Monto_OC_USD:r.monto_oc.toFixed(2),Prioridad:r.imp_accion
+  })),'Importar Urgente');
+  // Hoja 5: Plan OC completo
+  add(D.items.filter(r=>r.u6m>0).sort((a,b)=>b.ing6m-a.ing6m).map(r=>({
+    Código:r.cod,Nombre:getNombre(r.cod),Familia:r.familia,Marca:r.marca,Clase:r.clase,
+    Unid_6m:r.u6m,Ing_6m_USD:r.ing6m.toFixed(2),Prom_mensual:r.prom_men.toFixed(1),
+    Stock_Rec_2m:r.stock_rec,Monto_OC_USD:r.monto_oc.toFixed(2),Tendencia:r.tend
+  })),'Plan OC');
   XLSX.writeFile(wb,'TractorPlan_COMPLETO_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 function dlSection(tipo){
   if(!D){alert('Primero carga tu base de datos.');return;}
   let rows,fname;
-  if(tipo==='abc'){rows=D.items.map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total:r.ing_tot.toFixed(2),Unid_Total:r.cant_tot,Precio:r.precio.toFixed(2),Dias_Sin:r.dias_sin}));fname='ABC';}
-  else if(tipo==='stock0'){rows=D.items.filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin:r.dias_sin,Ing_Hist:r.ing_tot.toFixed(2),Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Accion:r.accion_sin}));fname='Stock0';}
-  else if(tipo==='art'){rows=_artRows.map(r=>({Código:r.cod,Nombre:getNombre(r.cod),Familia:r.familia,Marca:r.marca,Clase:r.clase,Ing_Total:r.ing_tot.toFixed(2),Ing_6m:r.ing6m.toFixed(2),Unid_6m:r.u6m,Precio:r.precio.toFixed(2),Tendencia:r.tend,Stock_Rec:r.stock_rec,Monto_OC:r.monto_oc.toFixed(2),Dias_Sin:r.dias_sin}));fname='Articulos';}
-  else if(tipo==='imp'){rows=getFiltered('IMP_FAM','IMP_MARCA').filter(r=>r.acel_pct>=200).sort((a,b)=>b.acel_pct-a.acel_pct).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Prev_3m:r.up3m,Curr_3m:r.u3m,Crecimiento_pct:r.acel_pct.toFixed(1),Precio:r.precio.toFixed(2),Monto_OC:r.monto_oc.toFixed(2),Prioridad:r.imp_accion}));fname='Importar';}
-  else{rows=getFiltered('SIN_FAM','SIN_MARCA').filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin).map(r=>({Código:r.cod,Familia:r.familia,Marca:r.marca,Clase:r.clase,Dias_Sin:r.dias_sin,Ing_Hist:r.ing_tot.toFixed(2),Accion:r.accion_sin}));fname='SinMovimiento';}
+
+  // Helper para fila estándar de artículo
+  const artRow = r => ({
+    Código:r.cod, Nombre:getNombre(r.cod), Familia:r.familia,
+    Marca:r.marca, Clase:r.clase,
+    Ing_Total_USD:r.ing_tot.toFixed(2),
+    Ing_6m_USD:r.ing6m.toFixed(2),
+    Unid_6m:r.u6m,
+    Precio_USD:r.precio.toFixed(2),
+    Tendencia:r.tend,
+    Prom_mensual:r.prom_men.toFixed(1),
+    Stock_Rec_2m:r.stock_rec,
+    Monto_OC_USD:r.monto_oc.toFixed(2),
+    Dias_Sin_Mov:r.dias_sin
+  });
+
+  if(tipo==='reponer'){
+    // Artículos activos Clase A y B — prioridad de reposición
+    rows=D.items.filter(r=>r.u6m>0&&(r.clase==='A'||r.clase==='B'))
+      .sort((a,b)=>b.ing6m-a.ing6m)
+      .map(r=>({...artRow(r), Accion_Recomendada: r.clase==='A'?'REPONER YA':'REPONER PRONTO'}));
+    fname='Reposicion_Urgente';
+  }
+  else if(tipo==='claseA'){
+    rows=D.items.filter(r=>r.clase==='A').sort((a,b)=>b.ing_tot-a.ing_tot).map(artRow);
+    fname='Clase_A';
+  }
+  else if(tipo==='planOC'){
+    rows=D.items.filter(r=>r.u6m>0).sort((a,b)=>b.ing6m-a.ing6m)
+      .map(r=>({
+        Código:r.cod, Nombre:getNombre(r.cod), Familia:r.familia,
+        Marca:r.marca, Clase:r.clase,
+        Unid_6m:r.u6m, Ing_6m_USD:r.ing6m.toFixed(2),
+        Prom_mensual:r.prom_men.toFixed(1),
+        Stock_Rec_2m:r.stock_rec,
+        Precio_USD:r.precio.toFixed(2),
+        Monto_OC_USD:r.monto_oc.toFixed(2),
+        Tendencia:r.tend,
+        Prioridad: r.clase==='A'?'ALTA':r.clase==='B'?'MEDIA':'BAJA'
+      }));
+    fname='Plan_OC_Completo';
+  }
+  else if(tipo==='abc'){
+    rows=D.items.sort((a,b)=>b.ing_tot-a.ing_tot)
+      .map(r=>({
+        Código:r.cod, Nombre:getNombre(r.cod), Familia:r.familia,
+        Marca:r.marca, Clase:r.clase,
+        Ing_Total_USD:r.ing_tot.toFixed(2),
+        Unid_Total:r.cant_tot,
+        Precio_USD:r.precio.toFixed(2),
+        Dias_Sin_Mov:r.dias_sin
+      }));
+    fname='Clasificacion_ABC';
+  }
+  else if(tipo==='stock0'){
+    rows=D.items.filter(r=>r.dias_sin>90).sort((a,b)=>b.dias_sin-a.dias_sin)
+      .map(r=>({
+        Código:r.cod, Nombre:getNombre(r.cod), Familia:r.familia,
+        Marca:r.marca, Clase:r.clase,
+        Dias_Sin_Mov:r.dias_sin,
+        Ing_Historico_USD:r.ing_tot.toFixed(2),
+        Precio_USD:r.precio.toFixed(2),
+        Stock_Rec_2m:r.stock_rec,
+        Monto_OC_USD:r.monto_oc.toFixed(2),
+        Accion:r.accion_sin
+      }));
+    fname='Stock_Cero_Sin_Movimiento';
+  }
+  else if(tipo==='art'){
+    rows=_artRows.map(artRow);
+    fname='Articulos_Vista_Actual';
+  }
+  else if(tipo==='imp'){
+    rows=getFiltered('IMP_FAM','IMP_MARCA').filter(r=>r.acel_pct>=200)
+      .sort((a,b)=>b.acel_pct-a.acel_pct)
+      .map(r=>({
+        Código:r.cod, Nombre:getNombre(r.cod), Familia:r.familia,
+        Marca:r.marca, Clase:r.clase,
+        Unid_Prev_3m:r.up3m, Unid_Curr_3m:r.u3m,
+        Crecimiento_pct:r.acel_pct.toFixed(1),
+        Precio_USD:r.precio.toFixed(2),
+        Monto_OC_USD:r.monto_oc.toFixed(2),
+        Prioridad:r.imp_accion
+      }));
+    fname='Importar_Urgente';
+  }
+  else if(tipo==='sin'){
+    rows=getFiltered('SIN_FAM','SIN_MARCA').filter(r=>r.dias_sin>90)
+      .sort((a,b)=>b.dias_sin-a.dias_sin)
+      .map(r=>({
+        Código:r.cod, Nombre:getNombre(r.cod), Familia:r.familia,
+        Marca:r.marca, Clase:r.clase,
+        Dias_Sin_Mov:r.dias_sin,
+        Ing_Historico_USD:r.ing_tot.toFixed(2),
+        Accion:r.accion_sin
+      }));
+    fname='Sin_Movimiento';
+  }
+  else if(tipo==='creciendo'){
+    rows=D.items.filter(r=>r.tend&&r.tend.includes('CRECIENDO'))
+      .sort((a,b)=>b.ing6m-a.ing6m).map(artRow);
+    fname='Demanda_Creciendo';
+  }
+  else if(tipo==='bajando'){
+    rows=D.items.filter(r=>r.tend&&r.tend.includes('BAJANDO'))
+      .sort((a,b)=>b.ing_tot-a.ing_tot).map(artRow);
+    fname='Demanda_Bajando';
+  }
+  if(!rows||!rows.length){alert('No hay datos para exportar.');return;}
   dlCSV(rows,fname);
 }
 </script>
