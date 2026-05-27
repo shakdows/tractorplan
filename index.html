@@ -150,6 +150,28 @@ canvas{display:block;}
 .repo-sum{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:11px;padding-top:11px;border-top:1px solid var(--bd);font-size:12.5px;color:var(--t2);}
 .repo-sum b{font-weight:800;color:var(--t1);}
 .repo-sum .sep{color:var(--bd);}
+
+/* ===== Centro de Decisiones (Dashboard) ===== */
+.dc-wrap{background:linear-gradient(135deg,#ffffff,#fafbff);border:1px solid var(--bd);border-radius:13px;padding:18px 20px;margin-bottom:16px;}
+.dc-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+.dc-title{font-size:16px;font-weight:800;letter-spacing:-.3px;}
+.dc-title span{color:var(--t3);font-weight:500;font-size:12.5px;display:block;margin-top:2px;}
+.dc-health{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
+.dc-h{background:var(--w);border:1px solid var(--bd);border-radius:10px;padding:12px 13px;}
+.dc-h .h-l{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.dc-h .h-v{font-size:20px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.dc-h .h-s{font-size:11px;color:var(--t3);margin-top:3px;}
+.dc-actions-t{font-size:11px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.dc-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.dc-act{border:1px solid var(--bd);border-radius:11px;padding:15px;border-top:4px solid var(--t4);background:var(--w);cursor:pointer;transition:box-shadow .15s, transform .1s;}
+.dc-act:hover{box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px);}
+.dc-act.urg{border-top-color:var(--R);} .dc-act.cap{border-top-color:var(--A);} .dc-act.fut{border-top-color:var(--P);}
+.dc-act .a-n{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:7px;display:flex;align-items:center;justify-content:space-between;}
+.dc-act .a-big{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1.1;margin-bottom:4px;}
+.dc-act .a-d{font-size:11.5px;color:var(--t3);line-height:1.45;}
+.dc-act .a-go{font-size:11px;font-weight:700;margin-top:9px;display:inline-flex;align-items:center;gap:4px;}
+@media(max-width:1100px){.dc-health{grid-template-columns:repeat(3,1fr);} .dc-acts{grid-template-columns:1fr;}}
+@media(max-width:700px){.dc-health{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
@@ -235,6 +257,9 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
     <div class="kpi" id="KPI_sin"><div class="ka" style="background:var(--R)"></div><div class="kl">Sin Movimiento +90d</div><div class="kv" id="K_sin" style="color:var(--R)">-</div><div class="ks">Candidatos liquidar</div></div>
     <div class="kpi" id="KPI_imp"><div class="ka" style="background:var(--P)"></div><div class="kl">Importar Urgente</div><div class="kv" id="K_imp" style="color:var(--P)">-</div><div class="ks">Demanda explosiva >200%</div></div>
   </div>
+
+  <!-- CENTRO DE DECISIONES DE REPOSICION: salud del inventario + que hacer ahora -->
+  <div id="DECISION_CENTER" style="display:none"></div>
   <div class="g2">
     <div class="card"><div class="ch"><div class="ct">Ingresos por Familia (clic para filtrar)</div></div><div id="FAM_BARS"></div></div>
     <div class="card"><div class="ch"><div class="ct">Clasificacion ABC</div></div><div id="ABC_VIS"></div></div>
@@ -1160,8 +1185,63 @@ function renderDashboard() {
   renderFamBars();
   renderABCVis();
   renderTopArt();
+  renderDecisionCenter();
   var fams = Object.keys(D.fam_chart||{});
   if (fams.length) { document.getElementById('FAM_SEL').value = fams[0]; drawFamChart(fams[0]); }
+}
+
+// Centro de decisiones: traduce todo el analisis a salud del inventario + acciones concretas
+function renderDecisionCenter() {
+  var el = document.getElementById('DECISION_CENTER'); if (!el || !D) return;
+  var activos = D.items.filter(function(i){return i.u6m>0;});
+  activos.forEach(function(i){ i._rp = calcRepo(i); });
+  var hayStock = D.kpis && D.kpis.hay_stock;
+  // Salud del inventario
+  var invRec = activos.reduce(function(a,i){return a+i._rp.monto;},0);
+  var urgentes = activos.filter(function(i){return i._rp.urg==='urgente' && i._rp.comprar>0;});
+  var invUrg = urgentes.reduce(function(a,i){return a+i._rp.monto;},0);
+  // Capital parado: articulos sin movimiento +180d (riesgo de obsolescencia)
+  var muertos = D.items.filter(function(i){return i.dias_sin>180;});
+  var capMuerto = muertos.reduce(function(a,i){return a + (i.tiene_stock ? (i.stock_actual||0)*(i.precio||0) : 0);},0);
+  // Cobertura promedio (solo si hay stock real)
+  var conStock = activos.filter(function(i){return i.tiene_stock;});
+  var cobProm = conStock.length ? Math.round(conStock.reduce(function(a,i){return a+Math.min(i._rp.cobDias,999);},0)/conStock.length) : null;
+  // Demanda creciente fuerte
+  var creciendo = D.items.filter(function(i){return i.acel_pct>=200;});
+
+  var health = [
+    {l:'Inversion a comprar', v:fmt(invRec), s:'Para reponer todo lo sugerido', col:'var(--B)'},
+    {l:'Reponer ya', v:urgentes.length.toLocaleString('es-PE'), s:fmt(invUrg)+' en pedidos urgentes', col:'var(--R)'},
+    {l:'Capital parado', v:hayStock?fmt(capMuerto):muertos.length.toLocaleString('es-PE'), s:hayStock?(muertos.length+' art. sin venta +180d'):'articulos sin venta +180d', col:'var(--A)'},
+    {l:'Cobertura promedio', v:cobProm!==null?(cobProm>=999?'+999':cobProm)+' dias':'s/d', s:cobProm!==null?'Dias de stock disponible':'Sube stock para verlo', col:'var(--G)'},
+    {l:'A anticipar', v:creciendo.length.toLocaleString('es-PE'), s:'Demanda creciendo +200%', col:'var(--P)'}
+  ];
+  var healthHtml = health.map(function(h){
+    return '<div class="dc-h"><div class="h-l">'+h.l+'</div><div class="h-v" style="color:'+h.col+'">'+h.v+'</div><div class="h-s">'+h.s+'</div></div>';
+  }).join('');
+
+  // Acciones recomendadas (que hacer ahora)
+  var acts = [
+    {cls:'urg', n:'1. Reponer urgente', big:urgentes.length+' articulos', d:'Estan por debajo de su punto de reorden. Invierte <b>'+fmt(invUrg)+'</b> para no quedarte sin stock.', go:'Ver Compras OC \u2192', nav:'oc', col:'var(--R)'},
+    {cls:'cap', n:'2. Liberar capital', big:muertos.length+' articulos', d:'Llevan mas de 180 dias sin venderse'+(hayStock?'. Inmovilizan <b>'+fmt(capMuerto)+'</b>':'')+'. Conviene liquidar o descontinuar.', go:'Ver Sin Stock \u2192', nav:'sin', col:'var(--A)'},
+    {cls:'fut', n:'3. Anticipar demanda', big:creciendo.length+' articulos', d:'Su demanda crece fuerte. Programa la compra antes de que se agoten, sobre todo si son de importacion.', go:'Ver Importar \u2192', nav:'imp', col:'var(--P)'}
+  ];
+  var actsHtml = acts.map(function(a){
+    return '<div class="dc-act '+a.cls+'" onclick="showPage(\''+a.nav+'\')">'
+      +'<div class="a-n">'+a.n+'</div>'
+      +'<div class="a-big" style="color:'+a.col+'">'+a.big+'</div>'
+      +'<div class="a-d">'+a.d+'</div>'
+      +'<div class="a-go" style="color:'+a.col+'">'+a.go+'</div>'
+      +'</div>';
+  }).join('');
+
+  el.innerHTML = '<div class="dc-wrap">'
+    +'<div class="dc-top"><div class="dc-title">Centro de reposicion<span>Que dicen tus datos hoy y que conviene hacer. Modelo: entrega '+REPO.lead+'d &middot; servicio '+REPO.srv+'% &middot; cobertura '+REPO.cob+'m</span></div></div>'
+    +'<div class="dc-health">'+healthHtml+'</div>'
+    +'<div class="dc-actions-t">Que hacer ahora</div>'
+    +'<div class="dc-acts">'+actsHtml+'</div>'
+    +'</div>';
+  el.style.display = 'block';
 }
 
 function renderFamBars() {
