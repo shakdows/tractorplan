@@ -150,6 +150,7 @@ canvas{display:block;}
 .repo-sum{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:11px;padding-top:11px;border-top:1px solid var(--bd);font-size:12.5px;color:var(--t2);}
 .repo-sum b{font-weight:800;color:var(--t1);}
 .repo-sum .sep{color:var(--bd);}
+.bDesc{background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700;white-space:nowrap;text-decoration:line-through;}
 
 /* ===== Centro de Decisiones (Dashboard) ===== */
 .dc-wrap{background:linear-gradient(135deg,#ffffff,#fafbff);border:1px solid var(--bd);border-radius:13px;padding:18px 20px;margin-bottom:16px;}
@@ -388,6 +389,16 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
   <div class="model-bar">
     <div class="mb-title">Modelo de reposicion</div>
     <div class="mb-ctrl">
+      <label>Demanda calculada con
+        <select class="fs" onchange="updateRepoParam('win',this.value)" title="Sobre que periodo reciente medir la velocidad de venta">
+          <option value="1">Ultimo mes</option><option value="3">Ultimos 3 meses</option><option value="6" selected>Ultimos 6 meses</option><option value="12">Ultimo ano</option>
+        </select>
+      </label>
+      <label>Ver demanda por
+        <select class="fs" onchange="updateRepoParam('unit',this.value)" title="Unidad de tiempo para mostrar la velocidad de venta">
+          <option value="sem">Semana</option><option value="mes" selected>Mes</option><option value="ano">Ano</option>
+        </select>
+      </label>
       <label>Tiempo de entrega del proveedor
         <select class="fs" onchange="updateRepoParam('lead',this.value)" title="Dias desde que pides hasta que llega la mercaderia">
           <option value="15">15 dias</option><option value="30" selected>30 dias</option><option value="45">45 dias</option><option value="60">60 dias</option><option value="90">90 dias (importacion)</option>
@@ -401,6 +412,11 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
       <label>Cobertura objetivo
         <select class="fs" onchange="updateRepoParam('cob',this.value)" title="Cuantos meses de demanda quieres tener en stock">
           <option value="1">1 mes</option><option value="2" selected>2 meses</option><option value="3">3 meses</option>
+        </select>
+      </label>
+      <label>No comprar si no vende en
+        <select class="fs" onchange="updateRepoParam('descMonths',this.value)" title="Si un articulo lleva mas de este tiempo sin venderse, se marca para descontinuar">
+          <option value="3">3 meses</option><option value="4">4 meses</option><option value="5">5 meses</option><option value="6" selected>6 meses</option><option value="12">12 meses</option>
         </select>
       </label>
     </div>
@@ -420,7 +436,7 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
   <div class="tb">
     <div class="tw h560"><table id="OC_TABLE"><thead><tr>
       <th>#</th><th data-sort="cod">Codigo</th><th data-sort="nombre">Nombre</th><th>Familia</th>
-      <th data-sort="clase">Clase</th><th data-sort="prom_proy" style="text-align:right">Demanda/mes</th>
+      <th data-sort="clase">Clase</th><th data-sort="demView" id="TH_DEM" style="text-align:right">Demanda/mes</th>
       <th data-sort="stockv" style="text-align:right">Stock actual</th><th data-sort="ropv" style="text-align:right">Punto reorden</th>
       <th data-sort="comprar" style="text-align:right">Comprar (ud)</th><th data-sort="precio" style="text-align:right">Precio</th>
       <th data-sort="invComprar" style="text-align:right">Inversion</th><th data-sort="cobDias" style="text-align:right">Cobertura</th><th data-sort="urgord">Estado</th>
@@ -564,8 +580,12 @@ var artRows = [], ocRows = [];
 var hideSin = false, hideC = false;
 var _demandChart = null, _invChart = null;
 // Parametros del modelo de reposicion (data science). Configurables desde la UI.
-var REPO = { lead: 30, srv: 95, cob: 2 };
+var REPO = { lead: 30, srv: 95, cob: 2, win: 6, unit: 'mes', descMonths: 6 };
 var Z_TABLE = { 90:1.28, 95:1.65, 97:1.88, 99:2.33 };
+var WIN_FIELD = { 1:'u1m', 3:'u3m', 6:'u6m', 12:'u12m' };
+// Factor para mostrar la demanda mensual en otra unidad de tiempo
+var UNIT_FACTOR = { sem: 12/52, mes: 1, ano: 12 };
+var UNIT_LABEL = { sem: '/sem', mes: '/mes', ano: '/ano' };
 
 var FAM_COLORS = {
   'MISCELANIA':'#2563eb','SELLOS':'#7c3aed','PERNERIA':'#d97706',
@@ -883,7 +903,7 @@ function parseData(hdr, rawRows, fname) {
   var maxTs = Math.max.apply(null, rows.map(function(r){return r.f.getTime();}));
   var maxD = new Date(maxTs);
   function ago(m) { var d=new Date(maxD); d.setMonth(d.getMonth()-m); return d; }
-  var d6=ago(6), d3=ago(3), d12=ago(12);
+  var d6=ago(6), d3=ago(3), d12=ago(12), d1=ago(1);
   var cMap = {};
   rows.forEach(function(r) {
     if (!cMap[r.c]) cMap[r.c] = {ing:0,q:0,ps:[],hist:[],mo:{},nombre:'',familia:'',marca:'',stock:null};
@@ -913,12 +933,13 @@ function parseData(hdr, rawRows, fname) {
     var info = cMap[cod];
     var ult = new Date(Math.max.apply(null, info.hist.map(function(r){return r.f.getTime();})));
     var ds = Math.round((maxD-ult)/86400000);
-    var u6=0,u3=0,up3=0,ing6=0,u12=0;
+    var u6=0,u3=0,up3=0,ing6=0,u12=0,u1=0;
     info.hist.forEach(function(r){
       if(r.f>=d6){u6+=r.q;ing6+=r.i;}
       if(r.f>=d3)u3+=r.q;
       if(r.f>=d6&&r.f<d3)up3+=r.q;
       if(r.f>=d12)u12+=r.q;
+      if(r.f>=d1)u1+=r.q;
     });
     // Precio: promedio del archivo; si no hay, se deriva de ingreso/cantidad
     var pr = info.ps.length ? info.ps.reduce(function(a,b){return a+b;})/info.ps.length : (info.q>0 ? info.ing/info.q : 0);
@@ -952,7 +973,7 @@ function parseData(hdr, rawRows, fname) {
     // Marca: del archivo > sufijo del codigo > OTRO
     var mk2 = cod.match(/([A-Z]{2,6})$/); var marca = info.marca || (mk2 ? mk2[1] : 'OTRO');
     return {cod:cod,nombre:info.nombre||gN(cod)||cod,familia:info.familia||gF(cod)||'MISCELANIA',marca:marca,clase:'C',
-      ing_tot:info.ing,cant_tot:info.q,precio:pr,u6m:u6,ing6m:ing6,u3m:u3,up3m:up3,u12m:u12,
+      ing_tot:info.ing,cant_tot:info.q,precio:pr,u6m:u6,ing6m:ing6,u3m:u3,up3m:up3,u12m:u12,u1m:u1,
       dias_sin:ds,prom_men:pm,prom_men_12:pm12,prom_proy:prom_proy,sd_men:sd_men,stock_rec:sr,monto_oc:oc,acel_pct:acel,
       stock_actual:st,por_pedir:por_pedir,dias_cob:dias_cob,tiene_stock:st!==null,
       tend:tend,imp_accion:ia,accion_sin:'',meses_activo:ma,n_trans:info.hist.length,mo:info.mo};
@@ -1200,8 +1221,9 @@ function renderDecisionCenter() {
   var invRec = activos.reduce(function(a,i){return a+i._rp.monto;},0);
   var urgentes = activos.filter(function(i){return i._rp.urg==='urgente' && i._rp.comprar>0;});
   var invUrg = urgentes.reduce(function(a,i){return a+i._rp.monto;},0);
-  // Capital parado: articulos sin movimiento +180d (riesgo de obsolescencia)
-  var muertos = D.items.filter(function(i){return i.dias_sin>180;});
+  // Capital parado: articulos que superan el umbral de descontinuacion (riesgo de obsolescencia)
+  var descDias = REPO.descMonths*30;
+  var muertos = D.items.filter(function(i){return i.dias_sin>descDias;});
   var capMuerto = muertos.reduce(function(a,i){return a + (i.tiene_stock ? (i.stock_actual||0)*(i.precio||0) : 0);},0);
   // Cobertura promedio (solo si hay stock real)
   var conStock = activos.filter(function(i){return i.tiene_stock;});
@@ -1223,7 +1245,7 @@ function renderDecisionCenter() {
   // Acciones recomendadas (que hacer ahora)
   var acts = [
     {cls:'urg', n:'1. Reponer urgente', big:urgentes.length+' articulos', d:'Estan por debajo de su punto de reorden. Invierte <b>'+fmt(invUrg)+'</b> para no quedarte sin stock.', go:'Ver Compras OC \u2192', nav:'oc', col:'var(--R)'},
-    {cls:'cap', n:'2. Liberar capital', big:muertos.length+' articulos', d:'Llevan mas de 180 dias sin venderse'+(hayStock?'. Inmovilizan <b>'+fmt(capMuerto)+'</b>':'')+'. Conviene liquidar o descontinuar.', go:'Ver Sin Stock \u2192', nav:'sin', col:'var(--A)'},
+    {cls:'cap', n:'2. Liberar capital', big:muertos.length+' articulos', d:'Llevan mas de '+REPO.descMonths+' meses sin venderse'+(hayStock?'. Inmovilizan <b>'+fmt(capMuerto)+'</b>':'')+'. Conviene liquidar o descontinuar.', go:'Ver Sin Stock \u2192', nav:'sin', col:'var(--A)'},
     {cls:'fut', n:'3. Anticipar demanda', big:creciendo.length+' articulos', d:'Su demanda crece fuerte. Programa la compra antes de que se agoten, sobre todo si son de importacion.', go:'Ver Importar \u2192', nav:'imp', col:'var(--P)'}
   ];
   var actsHtml = acts.map(function(a){
@@ -1512,17 +1534,22 @@ function renderArt() {
 // Punto de reorden + stock de seguridad + cantidad optima a comprar
 // ============================================================
 function calcRepo(it) {
-  var demMes = it.prom_proy || it.prom_men || 0;     // demanda mensual proyectada (con tendencia)
+  // Demanda mensual segun la ventana de tiempo elegida (1, 3, 6 o 12 meses)
+  var winU = it[WIN_FIELD[REPO.win]] != null ? it[WIN_FIELD[REPO.win]] : it.u6m;
+  var demMes = (winU || 0) / REPO.win;
   var demDia = demMes / 30;
-  // Variabilidad de la demanda; si no hay historico suficiente, asume CV de 0.35
+  // Regla del usuario: si lleva mas de X meses sin venderse -> descontinuar (ya no comprar)
+  if (it.dias_sin > REPO.descMonths * 30) {
+    return { demMes:demMes, demDia:demDia, sd:0, Z:0, safety:0, rop:0, objetivo:0,
+             stock: it.tiene_stock ? (it.stock_actual||0) : 0, comprar:0,
+             cobDias: it.tiene_stock ? (demDia>0?Math.round((it.stock_actual||0)/demDia):999) : 0,
+             urg:'descontinuar', monto:0, tieneStock:it.tiene_stock, meses_sin: Math.round(it.dias_sin/30) };
+  }
   var sd = (it.sd_men != null && it.sd_men > 0) ? it.sd_men : demMes * 0.35;
-  var Z = Z_TABLE[REPO.srv] || 1.65;                 // factor segun nivel de servicio
+  var Z = Z_TABLE[REPO.srv] || 1.65;
   var leadMes = REPO.lead / 30;
-  // Stock de seguridad: cubre la variabilidad durante el tiempo de entrega
   var safety = Math.ceil(Z * sd * Math.sqrt(Math.max(leadMes, 0.03)));
-  // Punto de reorden: demanda durante el lead time + colchon de seguridad
   var rop = Math.ceil(demDia * REPO.lead + safety);
-  // Inventario objetivo: cobertura deseada + colchon de seguridad
   var objetivo = Math.ceil(demMes * REPO.cob + safety);
   var stock = it.tiene_stock ? (it.stock_actual || 0) : 0;
   var comprar = Math.max(0, objetivo - stock);
@@ -1531,9 +1558,11 @@ function calcRepo(it) {
   if (it.tiene_stock) urg = stock <= rop ? 'urgente' : stock < objetivo ? 'pronto' : 'ok';
   else urg = it.clase === 'A' ? 'urgente' : it.clase === 'B' ? 'pronto' : 'evaluar';
   return { demMes:demMes, demDia:demDia, sd:sd, Z:Z, safety:safety, rop:rop, objetivo:objetivo,
-           stock:stock, comprar:comprar, cobDias:cobDias, urg:urg, monto:comprar*(it.precio||0), tieneStock:it.tiene_stock };
+           stock:stock, comprar:comprar, cobDias:cobDias, urg:urg, monto:comprar*(it.precio||0), tieneStock:it.tiene_stock, meses_sin: Math.round(it.dias_sin/30) };
 }
-var URG_ORD = { urgente:0, pronto:1, evaluar:2, ok:3 };
+var URG_ORD = { urgente:0, pronto:1, evaluar:2, ok:3, descontinuar:4 };
+// Demanda mostrada en la unidad de tiempo elegida (semana / mes / ano)
+function demEnUnidad(demMes) { return demMes * (UNIT_FACTOR[REPO.unit]||1); }
 
 function renderOC() {
   var q = (document.getElementById('OC_SEARCH').value||'').toLowerCase();
@@ -1544,34 +1573,39 @@ function renderOC() {
   rows.forEach(function(r){
     var rp = calcRepo(r); r._rp = rp;
     r.comprar = rp.comprar; r.invComprar = rp.monto; r.cobDias = rp.cobDias; r.ropv = rp.rop; r.urgord = URG_ORD[rp.urg];
-    r.stockv = rp.tieneStock ? rp.stock : -1;
+    r.stockv = rp.tieneStock ? rp.stock : -1; r.demView = demEnUnidad(rp.demMes);
   });
-  if (ocSortK==='stock_rec') ocSortK='comprar'; // compat: la columna ahora es "comprar"
+  if (ocSortK==='stock_rec'||ocSortK==='prom_proy') ocSortK='comprar'; // compat con columnas renombradas
+  // Actualizar encabezado de demanda con la unidad elegida
+  var thDem = document.getElementById('TH_DEM'); if (thDem) thDem.textContent = {sem:'Demanda/semana', mes:'Demanda/mes', ano:'Demanda/ano'}[REPO.unit] || 'Demanda/mes';
   rows.sort(function(a,b){return ocSortA?(a[ocSortK]>b[ocSortK]?1:-1):(a[ocSortK]<b[ocSortK]?1:-1);});
   ocRows = rows;
-  var hayStock = D.kpis && D.kpis.hay_stock;
   document.getElementById('OC_BODY').innerHTML = rows.slice(0,400).map(function(r,i) {
     var rp = r._rp;
     var c = famColor(r.familia);
-    var urgMap = {urgente:['REPONER YA','bU'], pronto:['PEDIR PRONTO','bRV'], evaluar:['EVALUAR','bM'], ok:['STOCK OK','bM']};
+    var urgMap = {urgente:['REPONER YA','bU'], pronto:['PEDIR PRONTO','bRV'], evaluar:['EVALUAR','bM'], ok:['STOCK OK','bM'], descontinuar:['YA NO COMPRAR','bDesc']};
     var um = urgMap[rp.urg] || urgMap.evaluar;
-    var compColor = rp.comprar>0 ? (rp.urg==='urgente'?'#b91c1c':'#b45309') : '#16a34a';
+    var esDesc = rp.urg==='descontinuar';
+    var compColor = esDesc ? 'var(--t4)' : (rp.comprar>0 ? (rp.urg==='urgente'?'#b91c1c':'#b45309') : '#16a34a');
     var stockCell = rp.tieneStock
       ? '<td style="text-align:right;font-weight:600;color:'+(rp.cobDias<REPO.lead?'#dc2626':rp.cobDias<REPO.lead*2?'#d97706':'#16a34a')+'">'+fmtN(rp.stock)+'</td>'
       : '<td style="text-align:right;color:var(--t4)" title="El archivo no trae stock; se asume 0">s/d</td>';
     var cobCell = rp.tieneStock
       ? '<td style="text-align:right;font-weight:600;color:'+(rp.cobDias<REPO.lead?'#dc2626':'#64748b')+'">'+(rp.cobDias>=999?'+999':rp.cobDias)+'d</td>'
       : '<td style="text-align:right;color:var(--t4)">&mdash;</td>';
-    return '<tr onclick="openProdModal(\''+r.cod+'\')">'
+    var compCell = esDesc
+      ? '<td style="text-align:right;font-weight:700;color:var(--t4)" title="Sin ventas en '+rp.meses_sin+' meses: no reponer">no comprar</td>'
+      : '<td style="text-align:right;font-weight:800;font-size:13px;color:'+compColor+'" title="Cantidad recomendada a comprar">'+(rp.comprar>0?fmtN(rp.comprar):'0')+'</td>';
+    return '<tr onclick="openProdModal(\''+r.cod+'\')"'+(esDesc?' style="opacity:.62"':'')+'>'
       +'<td style="color:var(--t4);font-weight:700">'+(i+1)+'</td>'
       +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+r.cod+'</td>'
       +'<td style="max-width:165px;overflow:hidden;text-overflow:ellipsis">'+r.nombre+'</td>'
       +'<td><span class="bfam" style="background:'+c+'18;color:'+c+'">'+famIcon(r.familia)+' '+r.familia+'</span></td>'
       +'<td><span class="b'+r.clase+'2">'+r.clase+'</span></td>'
-      +'<td style="text-align:right;font-weight:700;color:var(--A)" title="Demanda mensual proyectada con tendencia">'+rp.demMes.toFixed(1)+'</td>'
+      +'<td style="text-align:right;font-weight:700;color:var(--A)" title="Demanda '+(UNIT_LABEL[REPO.unit]||'/mes')+' (ventana: '+REPO.win+'m)">'+demEnUnidad(rp.demMes).toFixed(1)+'</td>'
       +stockCell
-      +'<td style="text-align:right;color:var(--t3)" title="Punto de reorden: cuando el stock baja de aqui, hay que pedir">'+fmtN(rp.rop)+'</td>'
-      +'<td style="text-align:right;font-weight:800;font-size:13px;color:'+compColor+'" title="Cantidad recomendada a comprar">'+(rp.comprar>0?fmtN(rp.comprar):'0')+'</td>'
+      +'<td style="text-align:right;color:var(--t3)" title="Punto de reorden: cuando el stock baja de aqui, hay que pedir">'+(esDesc?'&mdash;':fmtN(rp.rop))+'</td>'
+      +compCell
       +'<td style="text-align:right">$'+r.precio.toFixed(2)+'</td>'
       +'<td style="text-align:right;color:var(--B);font-weight:700">'+(rp.monto>0?fmt(rp.monto):'-')+'</td>'
       +cobCell
@@ -1581,7 +1615,8 @@ function renderOC() {
   var totalInv = rows.reduce(function(a,r){return a+r._rp.monto;},0);
   var totalUd = rows.reduce(function(a,r){return a+r._rp.comprar;},0);
   var nPedir = rows.filter(function(r){return r._rp.comprar>0;}).length;
-  document.getElementById('OC_FOOT').textContent = rows.length+' articulos | '+nPedir+' requieren pedido | Total a comprar: '+totalUd.toLocaleString('es-PE')+' unidades | Inversion estimada: '+fmt(totalInv)+' USD';
+  var nDesc = rows.filter(function(r){return r._rp.urg==='descontinuar';}).length;
+  document.getElementById('OC_FOOT').textContent = rows.length+' articulos | '+nPedir+' requieren pedido | '+nDesc+' para descontinuar | Total a comprar: '+totalUd.toLocaleString('es-PE')+' unidades | Inversion estimada: '+fmt(totalInv)+' USD';
   renderRepoSummary(rows);
 }
 
@@ -1605,19 +1640,21 @@ function renderRepoSummary(rows) {
   var totalUd = rows.reduce(function(a,r){return a+r._rp.comprar;},0);
   var totalInv = rows.reduce(function(a,r){return a+r._rp.monto;},0);
   var urgentes = rows.filter(function(r){return r._rp.urg==='urgente'&&r._rp.comprar>0;}).length;
-  var srvTxt = REPO.srv+'%';
+  var nDesc = rows.filter(function(r){return r._rp.urg==='descontinuar';}).length;
   el.innerHTML =
     '<span><b>'+nPedir.toLocaleString('es-PE')+'</b> de '+rows.length.toLocaleString('es-PE')+' articulos necesitan pedido</span>'
     +'<span class="sep">|</span><span><b style="color:var(--R)">'+urgentes+'</b> urgentes</span>'
+    +'<span class="sep">|</span><span><b style="color:var(--t3)">'+nDesc+'</b> para descontinuar</span>'
     +'<span class="sep">|</span><span>Total a comprar: <b>'+totalUd.toLocaleString('es-PE')+' ud</b></span>'
     +'<span class="sep">|</span><span>Inversion: <b style="color:var(--B)">'+fmt(totalInv)+'</b></span>'
-    +'<span class="sep">|</span><span style="color:var(--t4)">Modelo: entrega '+REPO.lead+'d &middot; servicio '+srvTxt+' &middot; cobertura '+REPO.cob+'m</span>';
+    +'<span class="sep">|</span><span style="color:var(--t4)">Demanda '+REPO.win+'m &middot; entrega '+REPO.lead+'d &middot; servicio '+REPO.srv+'% &middot; no comprar +'+REPO.descMonths+'m</span>';
 }
 
 // Aplica cambios de parametros del modelo desde la UI y recalcula
 function updateRepoParam(key, val) {
-  REPO[key] = (key==='srv'||key==='lead'||key==='cob') ? parseFloat(val) : val;
+  REPO[key] = (key==='unit') ? val : parseFloat(val);
   renderOCkpis(); renderOC();
+  if (document.getElementById('PAGE_dash').classList.contains('on')) renderDecisionCenter();
 }
 
 // ============================================================
@@ -1893,11 +1930,17 @@ function openProdModal(cod) {
     +(rp.tieneStock
       ? '<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Stock actual:</b> <span style="font-weight:800;color:'+(rp.cobDias<REPO.lead?'#dc2626':rp.cobDias<REPO.lead*2?'#d97706':'#16a34a')+'">'+fmtN(rp.stock)+' unidades</span> &middot; '+(rp.cobDias>=999?'+999':rp.cobDias)+' dias de cobertura</div>'
       : '<div style="font-size:11px;color:var(--t4);margin-bottom:5px">Sin stock en el archivo: se asume 0 (objetivo de cobertura)</div>')
-    +'<div style="margin-top:10px;padding:11px;background:'+(rp.comprar>0?'#fffbeb':'#f0fdf4')+';border:1.5px solid '+(rp.comprar>0?'#fde68a':'#bbf7d0')+';border-radius:8px">'
-    +'<div style="font-size:10px;color:var(--t4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Cantidad recomendada a comprar</div>'
-    +'<div style="font-size:24px;font-weight:900;color:'+(rp.comprar>0?'#b45309':'#15803d')+';line-height:1.1">'+(rp.comprar>0?fmtN(rp.comprar)+' <span style="font-size:13px;font-weight:600">unidades</span>':'No requiere pedido')+'</div>'
-    +(rp.comprar>0?'<div style="font-size:12px;color:var(--t3);margin-top:3px">Inversion estimada: <b style="color:var(--B)">'+fmt(rp.monto)+' USD</b></div>':'')
-    +'</div>'
+    +(rp.urg==='descontinuar'
+      ? '<div style="margin-top:10px;padding:11px;background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:8px">'
+        +'<div style="font-size:10px;color:var(--t4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Recomendacion</div>'
+        +'<div style="font-size:22px;font-weight:900;color:#475569;line-height:1.1;text-decoration:line-through">YA NO COMPRAR</div>'
+        +'<div style="font-size:12px;color:var(--t3);margin-top:4px">Lleva <b>'+rp.meses_sin+' meses</b> sin venderse (umbral: '+REPO.descMonths+'m). Candidato a liquidar o descontinuar para liberar capital.</div>'
+        +'</div>'
+      : '<div style="margin-top:10px;padding:11px;background:'+(rp.comprar>0?'#fffbeb':'#f0fdf4')+';border:1.5px solid '+(rp.comprar>0?'#fde68a':'#bbf7d0')+';border-radius:8px">'
+        +'<div style="font-size:10px;color:var(--t4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Cantidad recomendada a comprar</div>'
+        +'<div style="font-size:24px;font-weight:900;color:'+(rp.comprar>0?'#b45309':'#15803d')+';line-height:1.1">'+(rp.comprar>0?fmtN(rp.comprar)+' <span style="font-size:13px;font-weight:600">unidades</span>':'No requiere pedido')+'</div>'
+        +(rp.comprar>0?'<div style="font-size:12px;color:var(--t3);margin-top:3px">Inversion estimada: <b style="color:var(--B)">'+fmt(rp.monto)+' USD</b></div>':'')
+        +'</div>')
     +'</div>'
     +'<div class="gb"><div class="gbt">Oferta vs Demanda</div>'
     +'<div style="font-size:11px;color:var(--t3);margin-bottom:6px"><b>Monto OC estimado:</b> <span style="font-weight:800;color:var(--B)">'+fmt(r.monto_oc)+' USD</span></div>'
