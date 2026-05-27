@@ -1207,7 +1207,8 @@ function getFilteredItems(famId, marcaId) {
 function populateSelects() {
   var K = D.kpis;
   var fams = K.familias || [];
-  var marcas = K.marcas || [];
+  // Leer marcas reales de los items (ya normalizados por normalizeBrandCode)
+  var marcas = [...new Set(D.items.map(function(i){return i.marca||'CTP';}).filter(Boolean))].sort();
   var fOpts = '<option value="">Todas las familias</option>' + fams.map(function(f){
     return '<option value="'+f+'">'+famIcon(f)+' '+f+'</option>';
   }).join('');
