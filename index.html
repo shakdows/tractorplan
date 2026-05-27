@@ -172,6 +172,7 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
 
 <!-- DASHBOARD -->
 <div class="pg on" id="PAGE_dash">
+  <div id="DETECTION_PANEL" style="display:none;background:var(--b2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:12px"></div>
   <div class="dlp" id="DL_PANEL" style="display:none">
     <div class="dlt">&#11015; Descargas Rapidas - Codigo, Nombre, Familia, Marca, Precio, OC</div>
     <div class="dlb">
@@ -723,16 +724,32 @@ function loadFile(file) {
 }
 
 function parseData(hdr, rawRows, fname) {
+  // Detector de columnas multiidioma (ES / EN / PT). Lee lo que el archivo traiga.
   function find(kws) { return hdr.find(function(h){return kws.some(function(k){return h.toLowerCase().indexOf(k)>=0;});}); }
-  var cF = find(['fecha','date']), cC = find(['código','codigo','code','artículo','sku','item']);
-  var cQ = find(['cantidad','vendida','consumida','qty']), cP = find(['precio','price','unitario']);
-  var cI = find(['ingreso','venta valor','revenue','importe']);
+  var cF = find(['fecha','date','data','emision','emisión']);
+  var cC = find(['código','codigo','code','cod','artículo','articulo','sku','item','referencia','ref']);
+  var cQ = find(['cantidad','vendida','consumida','qty','quantity','unidades','quantidade']);
+  var cP = find(['precio','price','unitario','preço','preco','p.unit','costo unit']);
+  var cI = find(['importe','ingreso','venta valor','revenue','total','monto','valor','subtotal']);
+  var cN = find(['nombre','descripcion','descripción','description','desc','producto','detalle','denominacion','denominación']);
+  var cFam = find(['familia','categoria','categoría','category','linea','línea','grupo','rubro','tipo','clase prod','segmento']);
+  var cM = find(['marca','brand','fabricante','proveedor','vendor','make']);
+  var cS = find(['stock','inventario','existencia','existencias','saldo','disponible','on hand','onhand','quantity on']);
   if (!cF || !cC) { alert('No se detectaron columnas Fecha y Codigo. Verifica el archivo.'); closeModal(); return; }
+  // Detección reportada al usuario
+  var DET = {fecha:!!cF, codigo:!!cC, cantidad:!!cQ, precio:!!cP, importe:!!cI, nombre:!!cN, familia:!!cFam, marca:!!cM, stock:!!cS};
   var rows = rawRows.map(function(r) {
     var o = {}; hdr.forEach(function(h,i){o[h]=r[i]!==undefined?r[i]:'';});
-    return {f:toDate(o[cF]), c:String(o[cC]||'').trim(), q:toNum(o[cQ]), p:toNum(o[cP]), i:toNum(o[cI])};
+    return {
+      f:toDate(o[cF]), c:String(o[cC]||'').trim(),
+      q:toNum(o[cQ]), p:toNum(o[cP]), i:toNum(o[cI]),
+      n:cN?String(o[cN]||'').trim():'', fam:cFam?String(o[cFam]||'').trim().toUpperCase():'',
+      m:cM?String(o[cM]||'').trim().toUpperCase():'', s:cS?toNum(o[cS]):null
+    };
   }).filter(function(r){return r.c && r.f;});
   if (!rows.length) { alert('No se pudieron leer filas validas.'); closeModal(); return; }
+  // FIX: si no hay columna de Importe, el ingreso se deriva de cantidad x precio (antes quedaba en $0 y rompia el ABC)
+  rows.forEach(function(r){ if (r.i===0 && r.q>0 && r.p>0) r.i = r.q * r.p; });
 
   var maxTs = Math.max.apply(null, rows.map(function(r){return r.f.getTime();}));
   var maxD = new Date(maxTs);
@@ -740,13 +757,28 @@ function parseData(hdr, rawRows, fname) {
   var d6=ago(6), d3=ago(3), d12=ago(12);
   var cMap = {};
   rows.forEach(function(r) {
-    if (!cMap[r.c]) cMap[r.c] = {ing:0,q:0,ps:[],hist:[],mo:{}};
+    if (!cMap[r.c]) cMap[r.c] = {ing:0,q:0,ps:[],hist:[],mo:{},nombre:'',familia:'',marca:'',stock:null};
     cMap[r.c].ing += r.i; cMap[r.c].q += r.q;
     if (r.p > 0) cMap[r.c].ps.push(r.p);
     cMap[r.c].hist.push(r);
+    // Atributos del archivo: primer valor no vacio para nombre/familia/marca; stock = ultimo valor leido (es un saldo actual)
+    if (!cMap[r.c].nombre && r.n) cMap[r.c].nombre = r.n;
+    if (!cMap[r.c].familia && r.fam) cMap[r.c].familia = r.fam;
+    if (!cMap[r.c].marca && r.m) cMap[r.c].marca = r.m;
+    if (r.s !== null) cMap[r.c].stock = r.s;
     var mk = r.f.getFullYear()+'-'+String(r.f.getMonth()+1).padStart(2,'0');
     cMap[r.c].mo[mk] = (cMap[r.c].mo[mk]||0) + r.q;
   });
+
+  // Regresion lineal simple: proyecta el siguiente valor de una serie mensual ordenada
+  function projectNext(serie) {
+    var n = serie.length; if (n < 2) return n ? serie[n-1] : 0;
+    var sx=0, sy=0, sxy=0, sxx=0;
+    for (var i=0;i<n;i++){ sx+=i; sy+=serie[i]; sxy+=i*serie[i]; sxx+=i*i; }
+    var den = n*sxx - sx*sx; if (den===0) return sy/n;
+    var slope = (n*sxy - sx*sy)/den, intercept = (sy - slope*sx)/n;
+    return Math.max(0, intercept + slope*n);
+  }
 
   var items = Object.keys(cMap).map(function(cod) {
     var info = cMap[cod];
@@ -759,16 +791,34 @@ function parseData(hdr, rawRows, fname) {
       if(r.f>=d6&&r.f<d3)up3+=r.q;
       if(r.f>=d12)u12+=r.q;
     });
-    var pr = info.ps.length ? info.ps.reduce(function(a,b){return a+b;})/info.ps.length : 0;
-    var pm=u6/6, pm12=u12/12, sr=Math.ceil(pm*2), oc=sr*pr;
+    // Precio: promedio del archivo; si no hay, se deriva de ingreso/cantidad
+    var pr = info.ps.length ? info.ps.reduce(function(a,b){return a+b;})/info.ps.length : (info.q>0 ? info.ing/info.q : 0);
+    var pm=u6/6, pm12=u12/12;
+    // Pronostico con tendencia: regresion sobre ultimos 12 meses, mezclada con el nivel reciente
+    var mkeys = Object.keys(info.mo).sort().slice(-12);
+    var serie = mkeys.map(function(m){return info.mo[m];});
+    var proy = projectNext(serie);
+    var prom_proy = Math.max(0, 0.6*proy + 0.4*pm); // mezcla tendencia + nivel reciente
+    var sr = Math.max(Math.ceil(prom_proy*2), Math.ceil(pm)); // objetivo 2 meses, piso en demanda reciente
+    // Stock real (si el archivo lo trae) -> cantidad real a pedir + dias de cobertura
+    var st = info.stock, por_pedir, dias_cob, oc;
+    if (st !== null) {
+      por_pedir = Math.max(0, sr - st);
+      dias_cob = pm>0 ? Math.round(st/pm*30) : (st>0?999:0);
+      oc = por_pedir * pr;
+    } else {
+      por_pedir = sr; dias_cob = null; oc = sr * pr;
+    }
     var acel = up3>0 ? (u3-up3)/up3*100 : 0;
     var tend = up3===0?'NUEVO':u3>up3*1.2?'\u2191 CRECIENDO':u3<up3*0.8?'\u2193 BAJANDO':'\u2192 ESTABLE';
     var ia = acel>=1000?'\uD83D\uDD34 IMPORTAR YA':acel>=500?'\uD83D\uDFE0 IMPORTAR PRONTO':acel>=200?'\uD83D\uDFE1 AUMENTAR STOCK':'\uD83D\uDFE2 MONITOREAR';
     var ma = Object.keys(info.mo).length;
-    var mk2 = cod.match(/([A-Z]{2,6})$/); var marca = mk2 ? mk2[1] : 'OTRO';
-    return {cod:cod,nombre:gN(cod)||cod,familia:gF(cod)||'MISCELANIA',marca:marca,clase:'C',
+    // Marca: del archivo > sufijo del codigo > OTRO
+    var mk2 = cod.match(/([A-Z]{2,6})$/); var marca = info.marca || (mk2 ? mk2[1] : 'OTRO');
+    return {cod:cod,nombre:info.nombre||gN(cod)||cod,familia:info.familia||gF(cod)||'MISCELANIA',marca:marca,clase:'C',
       ing_tot:info.ing,cant_tot:info.q,precio:pr,u6m:u6,ing6m:ing6,u3m:u3,up3m:up3,u12m:u12,
-      dias_sin:ds,prom_men:pm,prom_men_12:pm12,stock_rec:sr,monto_oc:oc,acel_pct:acel,
+      dias_sin:ds,prom_men:pm,prom_men_12:pm12,prom_proy:prom_proy,stock_rec:sr,monto_oc:oc,acel_pct:acel,
+      stock_actual:st,por_pedir:por_pedir,dias_cob:dias_cob,tiene_stock:st!==null,
       tend:tend,imp_accion:ia,accion_sin:'',meses_activo:ma,n_trans:info.hist.length,mo:info.mo};
   }).sort(function(a,b){return b.ing_tot-a.ing_tot;});
 
@@ -801,13 +851,22 @@ function parseData(hdr, rawRows, fname) {
     weeks[i].pe=prev.length?Math.round(prev.reduce(function(a,b){return a+b;})/prev.length):weeks[i].v;
     weeks[i].pf=Math.round(weeks[i].pe*1.05);
   }
-  var stk=8000;
+  // Stock inicial de la proyeccion: stock real sumado si el archivo lo trae; si no, 8 semanas de cobertura de la demanda
+  var hayStock = items.some(function(c){return c.tiene_stock;});
+  var stk;
+  if (hayStock) {
+    stk = items.reduce(function(a,c){return a + (c.tiene_stock ? c.stock_actual : 0);}, 0);
+  } else {
+    var promSem = weeks.length ? weeks.reduce(function(a,w){return a+w.v;},0)/weeks.length : 0;
+    stk = Math.round(promSem * 8);
+  }
   weeks.forEach(function(w){var pp=stk<w.pf*0.5?Math.round(w.pf*1.2):Math.round(w.pf*0.3);stk=Math.max(0,stk-w.v+pp);w.inv=stk;w.pp=pp;});
 
-  // Fam chart
+  // Fam chart (usa la familia real ya asignada a cada item)
+  var codFam = {}; items.forEach(function(it){codFam[it.cod]=it.familia;});
   var famM = {};
   rows.forEach(function(r){
-    var fa=gF(r.c)||'MISCELANIA';
+    var fa=codFam[r.c]||'MISCELANIA';
     var mk3=r.f.getFullYear()+'-'+String(r.f.getMonth()+1).padStart(2,'0');
     if(!famM[fa])famM[fa]={};
     famM[fa][mk3]=(famM[fa][mk3]||0)+r.i;
@@ -844,15 +903,41 @@ function parseData(hdr, rawRows, fname) {
       ing_clA: Math.round(clA.reduce(function(a,c){return a+c.ing_tot;},0)),
       ing_clB: Math.round(clB.reduce(function(a,c){return a+c.ing_tot;},0)),
       ing_clC: Math.round(clC.reduce(function(a,c){return a+c.ing_tot;},0)),
-      fam_ingresos: famIng
+      fam_ingresos: famIng,
+      detectado: DET, hay_stock: hayStock
     }
   };
 
   closeModal();
   document.getElementById('STATUS_BAR').textContent = '\u2705 ' + items.length.toLocaleString() + ' articulos \u00B7 ' + fname;
   document.getElementById('DL_PANEL').style.display = 'block';
+  showDetection(DET);
   if (PREV) showCompare();
   initUI();
+}
+
+// Panel de columnas detectadas: da confianza al usuario sobre que leyo la IA del archivo
+function showDetection(d) {
+  var el = document.getElementById('DETECTION_PANEL');
+  if (!el) return;
+  var campos = [
+    ['Fecha', d.fecha], ['Codigo', d.codigo], ['Cantidad', d.cantidad],
+    ['Precio', d.precio], ['Importe', d.importe], ['Nombre', d.nombre],
+    ['Familia', d.familia], ['Marca', d.marca], ['Stock', d.stock]
+  ];
+  var chips = campos.map(function(c){
+    var ok = c[1];
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;'
+      + (ok?'background:#dcfce7;color:#15803d':'background:#fee2e2;color:#b91c1c')+'">'
+      + (ok?'\u2713':'\u2717')+' '+c[0]+'</span>';
+  }).join('');
+  var nota = d.stock
+    ? 'Stock detectado: se calcula la <b>cantidad real a pedir</b> y los <b>dias de cobertura</b>.'
+    : 'Sin columna de stock: el plan muestra el <b>objetivo de cobertura</b> (cuanto deberias tener).';
+  el.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:7px">Columnas detectadas en tu archivo</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'+chips+'</div>'
+    + '<div style="font-size:11px;color:var(--t3)">'+nota+'</div>';
+  el.style.display = 'block';
 }
 
 // ============================================================
@@ -1475,6 +1560,10 @@ function openProdModal(cod) {
     +'<div><div style="font-size:10px;color:var(--t4);font-weight:600;text-transform:uppercase;margin-bottom:2px">Demanda mensual (12m)</div><div style="font-size:17px;font-weight:800;color:var(--B)">'+(r.prom_men_12||pm).toFixed(1)+' <span style="font-size:11px;font-weight:500">ud/mes</span></div></div>'
     +'</div>'
     +'<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Stock Rec. (2m):</b> <span style="font-weight:800;color:var(--t1)">'+fmtN(r.stock_rec)+' unidades</span></div>'
+    +(r.tiene_stock
+      ? '<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Stock actual:</b> <span style="font-weight:800;color:'+(r.dias_cob!==null&&r.dias_cob<30?'#dc2626':r.dias_cob<60?'#d97706':'#16a34a')+'">'+fmtN(r.stock_actual)+' unidades</span>'+(r.dias_cob!==null?' &middot; '+r.dias_cob+' dias de cobertura':'')+'</div>'
+        + '<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Cantidad a pedir:</b> <span style="font-weight:800;color:'+(r.por_pedir>0?'#b45309':'#16a34a')+'">'+(r.por_pedir>0?fmtN(r.por_pedir)+' unidades':'No requiere pedido')+'</span></div>'
+      : '')
     +'<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Punto equilibrio (1.5m):</b> <span style="font-weight:800;color:var(--P)">'+Math.ceil(peq)+' unidades</span></div>'
     +'<div style="font-size:11px;color:var(--t3);margin-bottom:4px"><b>Cobertura stock rec.:</b> '+cob.toFixed(1)+' meses</div>'
     +'<div class="gbar"><div class="gfill" style="width:'+Math.min(cob/3*100,100).toFixed(0)+'%;background:'+(cob>=2?'#16a34a':cob>=1?'#d97706':'#dc2626')+'"></div></div>'
