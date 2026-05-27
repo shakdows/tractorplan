@@ -809,6 +809,44 @@ function closeProdModal() {
 // ============================================================
 // LOAD BASE DATA (embedded)
 // ============================================================
+// Detecta el sufijo de marca comun a los codigos (ej. todos terminan en "CTP").
+// Asi separamos bien codigo (3938986PK) de marca (CTP) cuando vienen pegados.
+function detectBrandSuffix(items) {
+  var n = items.length; if (!n) return null;
+  var counts = {};
+  items.forEach(function(it){
+    var m = String(it.cod||'').match(/([A-Z]+)$/);
+    if (!m) return;
+    var letters = m[1];
+    for (var k=2; k<=Math.min(6, letters.length-1>=2?letters.length:letters.length); k++){
+      if (k > letters.length) break;
+      var sfx = letters.slice(letters.length-k);
+      counts[sfx] = (counts[sfx]||0)+1;
+    }
+  });
+  var best=null, bestScore=0;
+  Object.keys(counts).forEach(function(sfx){
+    var frac = counts[sfx]/n;
+    if (frac >= 0.6) { var score = frac + sfx.length*0.01; if (score > bestScore){ bestScore=score; best=sfx; } }
+  });
+  return best;
+}
+// Aplica el sufijo detectado: limpia el codigo (cod_disp) y, si el archivo no trae
+// columna de marca, asigna la marca = sufijo. cod (clave interna) no se altera.
+function normalizeBrandCode(items, hasMarcaCol) {
+  var sfx = detectBrandSuffix(items);
+  items.forEach(function(it){
+    var cod = String(it.cod||'');
+    if (sfx && cod.length > sfx.length && cod.slice(-sfx.length) === sfx) {
+      it.cod_disp = cod.slice(0, cod.length - sfx.length);
+      if (!hasMarcaCol) it.marca = sfx;
+    } else {
+      it.cod_disp = cod;
+    }
+  });
+  return sfx;
+}
+
 function loadBaseData() {
   D = {
     items: RAW.items.map(function(r) {
@@ -822,6 +860,7 @@ function loadBaseData() {
     fam_chart: RAW.fam_chart,
     hist: RAW.hist || {}
   };
+  normalizeBrandCode(D.items, false); // separa marca (CTP) del codigo en los datos demo
   document.getElementById('STATUS_BAR').textContent = '\u2705 ' + D.kpis.total_art.toLocaleString() + ' articulos \u00B7 Peru Tractor BASE';
   document.getElementById('DL_PANEL').style.display = 'block';
   initUI();
@@ -978,6 +1017,9 @@ function parseData(hdr, rawRows, fname) {
       stock_actual:st,por_pedir:por_pedir,dias_cob:dias_cob,tiene_stock:st!==null,
       tend:tend,imp_accion:ia,accion_sin:'',meses_activo:ma,n_trans:info.hist.length,mo:info.mo};
   }).sort(function(a,b){return b.ing_tot-a.ing_tot;});
+
+  // Separa la marca (sufijo comun, ej. CTP) del codigo cuando vienen pegados
+  normalizeBrandCode(items, !!cM);
 
   var tot = items.reduce(function(a,c){return a+c.ing_tot;},0); var acum=0;
   items.forEach(function(c){
@@ -1309,7 +1351,7 @@ function renderTopArt() {
   document.getElementById('TOP_ART').innerHTML = D.items.slice(0,8).map(function(r,i) {
     return '<div onclick="openProdModal(\''+r.cod+'\')" style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:'+(i<7?'1px solid #f1f5f9':'none')+';cursor:pointer">'
       +'<div style="width:21px;height:21px;border-radius:5px;background:'+(i<3?'#fef3c7':'#f1f5f9')+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:'+(i<3?'#92400e':'#64748b')+';flex-shrink:0">'+(i+1)+'</div>'
-      +'<div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:11.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis">'+r.cod+'</div>'
+      +'<div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:11.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis">'+(r.cod_disp||r.cod)+'</div>'
       +'<div style="font-size:10px;color:'+famColor(r.familia)+';margin-top:1px">'+famIcon(r.familia)+' '+r.nombre+'</div></div>'
       +'<span class="b'+r.clase+'2" style="font-size:10px">'+r.clase+'</span>'
       +'<div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--G)">'+fmt(r.ing6m)+'</div><div style="font-size:10px;color:var(--t4)">6m</div></div>'
@@ -1466,7 +1508,7 @@ function renderFamDetailBody() {
     var dc = r.dias_sin>365?'color:#dc2626':r.dias_sin>90?'color:#d97706':'color:#16a34a';
     return '<tr onclick="openProdModal(\''+r.cod+'\')" style="border-bottom:1px solid #f1f5f9;cursor:pointer" onmouseover="this.style.background=\'#f0f9ff\'" onmouseout="this.style.background=\'\'">'
       +'<td style="padding:8px 11px;color:var(--t4);font-weight:700">'+(i+1)+'</td>'
-      +'<td style="padding:8px 11px;font-family:monospace;font-weight:700;font-size:11px;white-space:nowrap">'+r.cod+'</td>'
+      +'<td style="padding:8px 11px;font-family:monospace;font-weight:700;font-size:11px;white-space:nowrap">'+(r.cod_disp||r.cod)+'</td>'
       +'<td style="padding:8px 11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.nombre+'</td>'
       +'<td style="padding:8px 11px;white-space:nowrap"><span class="bmk">'+r.marca+'</span></td>'
       +'<td style="padding:8px 11px;white-space:nowrap"><span class="b'+r.clase+'2">'+r.clase+'</span></td>'
@@ -1506,7 +1548,7 @@ function renderArt() {
     var dc = r.dias_sin>365?'color:#dc2626':r.dias_sin>90?'color:#d97706':'color:#16a34a';
     var c = famColor(r.familia);
     return '<tr onclick="openProdModal(\''+r.cod+'\')">'
-      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+r.cod+'</td>'
+      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+(r.cod_disp||r.cod)+'</td>'
       +'<td style="max-width:190px;overflow:hidden;text-overflow:ellipsis">'+r.nombre+'</td>'
       +'<td><span class="bfam" style="background:'+c+'18;color:'+c+'">'+famIcon(r.familia)+' '+r.familia+'</span></td>'
       +'<td><span class="bmk">'+r.marca+'</span></td>'
@@ -1598,7 +1640,7 @@ function renderOC() {
       : '<td style="text-align:right;font-weight:800;font-size:13px;color:'+compColor+'" title="Cantidad recomendada a comprar">'+(rp.comprar>0?fmtN(rp.comprar):'0')+'</td>';
     return '<tr onclick="openProdModal(\''+r.cod+'\')"'+(esDesc?' style="opacity:.62"':'')+'>'
       +'<td style="color:var(--t4);font-weight:700">'+(i+1)+'</td>'
-      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+r.cod+'</td>'
+      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+(r.cod_disp||r.cod)+'</td>'
       +'<td style="max-width:165px;overflow:hidden;text-overflow:ellipsis">'+r.nombre+'</td>'
       +'<td><span class="bfam" style="background:'+c+'18;color:'+c+'">'+famIcon(r.familia)+' '+r.familia+'</span></td>'
       +'<td><span class="b'+r.clase+'2">'+r.clase+'</span></td>'
@@ -1672,7 +1714,7 @@ function renderImp() {
     var c = famColor(r.familia);
     return '<tr onclick="openProdModal(\''+r.cod+'\')">'
       +'<td style="color:var(--t4);font-weight:700">'+(i+1)+'</td>'
-      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+r.cod+'</td>'
+      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+(r.cod_disp||r.cod)+'</td>'
       +'<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.nombre+'</td>'
       +'<td><span class="bfam" style="background:'+c+'18;color:'+c+'">'+famIcon(r.familia)+' '+r.familia+'</span></td>'
       +'<td><span class="bmk">'+r.marca+'</span></td>'
@@ -1703,7 +1745,7 @@ function renderSin() {
     var c = famColor(r.familia);
     return '<tr onclick="openProdModal(\''+r.cod+'\')" style="background:'+(r.clase==='A'?'#fffbeb':'')+'">'
       +'<td style="color:var(--t4);font-weight:700">'+(i+1)+'</td>'
-      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+r.cod+'</td>'
+      +'<td style="font-family:monospace;font-weight:700;font-size:11px">'+(r.cod_disp||r.cod)+'</td>'
       +'<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.nombre+'</td>'
       +'<td><span class="bfam" style="background:'+c+'18;color:'+c+'">'+famIcon(r.familia)+' '+r.familia+'</span></td>'
       +'<td><span class="bmk">'+r.marca+'</span></td>'
@@ -1902,7 +1944,7 @@ function openProdModal(cod) {
     '<div class="prod-head">'
     +'<div style="width:46px;height:46px;border-radius:11px;background:'+color+'18;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+famIcon(r.familia)+'</div>'
     +'<div style="flex:1">'
-    +'<div style="font-size:11px;font-family:monospace;color:var(--t3);margin-bottom:2px">'+r.cod+' &middot; <span class="bmk">'+r.marca+'</span></div>'
+    +'<div style="font-size:11px;font-family:monospace;color:var(--t3);margin-bottom:2px">'+(r.cod_disp||r.cod)+' &middot; <span class="bmk">'+r.marca+'</span></div>'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">'+r.nombre+'</div>'
     +'<div style="display:flex;align-items:center;gap:7px">'
     +'<span class="bfam" style="background:'+color+'18;color:'+color+'">'+famIcon(r.familia)+' '+r.familia+'</span>'
@@ -2261,7 +2303,7 @@ function addFormattedSheet(wb, rows, sheetName, hdrColor) {
 
 function artRow(r) {
   return {
-    Codigo: r.cod,
+    Codigo: (r.cod_disp||r.cod),
     Nombre: r.nombre,
     Familia: r.familia,
     Marca: r.marca,
@@ -2289,7 +2331,7 @@ function dlSection(tipo) {
       .filter(function(r){return r.u6m>0&&(r.clase==='A'||r.clase==='B');})
       .sort(function(a,b){return b.ing6m-a.ing6m;})
       .map(function(r){
-        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod), Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
           Prom_mensual:+r.prom_men.toFixed(1), Unid_6m:+r.u6m, Ing_6m_USD:+r.ing6m.toFixed(2),
           Precio_USD:+r.precio.toFixed(2), Stock_Rec_2m:+r.stock_rec,
           Monto_OC_USD:+r.monto_oc.toFixed(2), Tendencia:r.tend,
@@ -2309,7 +2351,7 @@ function dlSection(tipo) {
       .filter(function(r){return r.u6m>0;})
       .sort(function(a,b){return b.ing6m-a.ing6m;})
       .map(function(r){
-        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod), Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
           Prom_mensual:+r.prom_men.toFixed(1), Unid_6m:+r.u6m,
           Precio_USD:+r.precio.toFixed(2), Stock_Rec_2m:+r.stock_rec,
           Monto_OC_USD:+r.monto_oc.toFixed(2), Tendencia:r.tend,
@@ -2321,7 +2363,7 @@ function dlSection(tipo) {
     rows = D.items
       .slice().sort(function(a,b){return b.ing_tot-a.ing_tot;})
       .map(function(r){
-        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod), Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
           Ing_Total_USD:+r.ing_tot.toFixed(2), Unid_Total:+r.cant_tot,
           Precio_USD:+r.precio.toFixed(2), Dias_Sin_Mov:+r.dias_sin};
       });
@@ -2332,7 +2374,7 @@ function dlSection(tipo) {
       .filter(function(r){return r.dias_sin>90;})
       .sort(function(a,b){return b.dias_sin-a.dias_sin;})
       .map(function(r){
-        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod), Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
           Dias_Sin_Mov:+r.dias_sin, Ing_Historico_USD:+r.ing_tot.toFixed(2),
           Precio_USD:+r.precio.toFixed(2), Stock_Rec_2m:+r.stock_rec,
           Monto_OC_USD:+r.monto_oc.toFixed(2), Accion:r.accion_sin};
@@ -2344,7 +2386,7 @@ function dlSection(tipo) {
       .filter(function(r){return r.acel_pct>=200;})
       .sort(function(a,b){return b.acel_pct-a.acel_pct;})
       .map(function(r){
-        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod), Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
           Prev_3m:+r.up3m, Curr_3m:+r.u3m, Crecimiento_pct:+r.acel_pct.toFixed(1),
           Precio_USD:+r.precio.toFixed(2), Monto_OC_USD:+r.monto_oc.toFixed(2),
           Prioridad:r.imp_accion};
@@ -2370,7 +2412,7 @@ function dlSection(tipo) {
       .filter(function(r){return r.dias_sin>90;})
       .sort(function(a,b){return b.dias_sin-a.dias_sin;})
       .map(function(r){
-        return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod), Nombre:r.nombre, Familia:r.familia, Marca:r.marca, Clase:r.clase,
           Dias_Sin_Mov:+r.dias_sin, Ing_Historico_USD:+r.ing_tot.toFixed(2), Accion:r.accion_sin};
       });
     sheetName = 'Sin Movimiento';
@@ -2380,7 +2422,7 @@ function dlSection(tipo) {
     PREV.items.forEach(function(i){prevMap[i.cod]=i;});
     rows = D.items.map(function(r){
       var p = prevMap[r.cod] || {ing_tot:0, clase:'N/A', dias_sin:0};
-      return {Codigo:r.cod, Nombre:r.nombre, Familia:r.familia,
+      return {Codigo:(r.cod_disp||r.cod), Nombre:r.nombre, Familia:r.familia,
         Clase_Nueva:r.clase, Clase_Anterior:p.clase||'N/A',
         Ing_Nuevo:+r.ing_tot.toFixed(2), Ing_Anterior:+(p.ing_tot||0).toFixed(2),
         Diferencia_Ing:+(r.ing_tot-(p.ing_tot||0)).toFixed(2),
@@ -2413,7 +2455,7 @@ function exportAll() {
 
   addFormattedSheet(wb,
     D.items.slice().sort(function(a,b){return b.ing_tot-a.ing_tot;}).map(function(r){
-      return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+      return {Codigo:(r.cod_disp||r.cod),Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
         Ing_Total_USD:+r.ing_tot.toFixed(2),Unid_Total:+r.cant_tot,
         Ing_6m_USD:+r.ing6m.toFixed(2),Precio_USD:+r.precio.toFixed(2),
         Tendencia:r.tend,Stock_Rec_2m:+r.stock_rec,
@@ -2423,7 +2465,7 @@ function exportAll() {
   addFormattedSheet(wb,
     D.items.filter(function(r){return r.u6m>0&&(r.clase==='A'||r.clase==='B');})
       .sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){
-        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod),Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
           Prom_mensual:+r.prom_men.toFixed(1),Unid_6m:+r.u6m,
           Precio_USD:+r.precio.toFixed(2),Stock_Rec_2m:+r.stock_rec,
           Monto_OC_USD:+r.monto_oc.toFixed(2),Tendencia:r.tend,
@@ -2433,21 +2475,21 @@ function exportAll() {
   addFormattedSheet(wb,
     D.items.filter(function(r){return r.dias_sin>90;})
       .sort(function(a,b){return b.dias_sin-a.dias_sin;}).map(function(r){
-        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod),Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
           Dias_Sin_Mov:+r.dias_sin,Ing_Historico_USD:+r.ing_tot.toFixed(2),Accion:r.accion_sin};
       }), 'Sin Stock Sin Movimiento', 'FF7F1D1D');
 
   addFormattedSheet(wb,
     D.items.filter(function(r){return r.acel_pct>=200;})
       .sort(function(a,b){return b.acel_pct-a.acel_pct;}).map(function(r){
-        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod),Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
           Crecimiento_pct:+r.acel_pct.toFixed(1),Curr_3m:+r.u3m,Prioridad:r.imp_accion};
       }), 'Importar Urgente', 'FF7C2D12');
 
   addFormattedSheet(wb,
     D.items.filter(function(r){return r.u6m>0;})
       .sort(function(a,b){return b.ing6m-a.ing6m;}).map(function(r){
-        return {Codigo:r.cod,Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
+        return {Codigo:(r.cod_disp||r.cod),Nombre:r.nombre,Familia:r.familia,Marca:r.marca,Clase:r.clase,
           Unid_6m:+r.u6m,Prom_mensual:+r.prom_men.toFixed(1),
           Stock_Rec_2m:+r.stock_rec,Monto_OC_USD:+r.monto_oc.toFixed(2),Tendencia:r.tend};
       }), 'Plan OC', 'FF92400E');
