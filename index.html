@@ -6,6 +6,7 @@
 <title>TractorPlan — Supply Chain Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{--bg:#f0f4f8;--w:#fff;--b3:#f8fafc;--bd:#e2e8f0;--t1:#0f172a;--t2:#374151;--t3:#64748b;--t4:#94a3b8;--A:#d97706;--G:#16a34a;--R:#dc2626;--B:#2563eb;--P:#7c3aed;}
@@ -109,6 +110,36 @@ canvas{display:block;}
 ::-webkit-scrollbar{width:5px;height:5px;} ::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:3px;}
 @media(max-width:1100px){.g5{grid-template-columns:repeat(3,1fr);} .g2{grid-template-columns:1fr;} .pl-row{flex-direction:column;} .rp{width:100%;min-width:0;}}
 @media(max-width:700px){.g5,.g4{grid-template-columns:1fr 1fr;} .sg{grid-template-columns:1fr 1fr;} .gg{grid-template-columns:1fr;}}
+
+/* ===== Planificacion: lectura del plan + graficos ===== */
+.plan-head{margin-bottom:6px;}
+.plan-head h2{font-size:19px;font-weight:800;letter-spacing:-.3px;margin:0;}
+.plan-sub{font-size:12.5px;color:var(--t3);margin-top:3px;line-height:1.5;max-width:760px;}
+.ins-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0 18px;}
+.ins{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:14px 15px;position:relative;border-left:4px solid var(--t4);}
+.ins.good{border-left-color:var(--G);} .ins.warn{border-left-color:var(--A);} .ins.bad{border-left-color:var(--R);} .ins.info{border-left-color:var(--B);}
+.ins-l{font-size:10.5px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.ins-v{font-size:23px;font-weight:800;line-height:1.1;letter-spacing:-.5px;font-variant-numeric:tabular-nums;}
+.ins-d{font-size:11.5px;color:var(--t3);margin-top:5px;line-height:1.45;}
+.chart-card{background:var(--w);border:1px solid var(--bd);border-radius:11px;padding:15px 16px 13px;margin-bottom:14px;}
+.chart-card .cc-t{font-size:13.5px;font-weight:700;color:var(--t1);}
+.chart-card .cc-s{font-size:11.5px;color:var(--t3);margin-top:2px;margin-bottom:10px;line-height:1.4;}
+.chart-box{position:relative;height:230px;}
+.chart-box.tall{height:250px;}
+.metric-help{background:var(--b3);border:1px solid var(--bd);border-radius:9px;padding:0;margin-bottom:14px;overflow:hidden;}
+.metric-help summary{cursor:pointer;padding:11px 14px;font-size:12.5px;font-weight:600;color:var(--t2);list-style:none;display:flex;align-items:center;gap:7px;}
+.metric-help summary::-webkit-details-marker{display:none;}
+.metric-help summary::before{content:'\\25B8';color:var(--t4);transition:transform .15s;}
+.metric-help[open] summary::before{transform:rotate(90deg);}
+.metric-help .mh-body{padding:2px 14px 13px;}
+.mh-item{display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--bd);font-size:12px;line-height:1.5;}
+.mh-item:first-child{border-top:none;}
+.mh-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;margin-top:4px;}
+.mh-name{font-weight:700;color:var(--t1);}
+.mh-desc{color:var(--t3);}
+.pt td[title]{cursor:help;}
+@media(max-width:1100px){.ins-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.ins-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -380,31 +411,41 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
 
 <!-- PLANIFICACION -->
 <div class="pg" id="PAGE_plan">
-  <div class="fb">
-    <h2>&#128200; Planificacion</h2>
-    <div class="vt" id="PLAN_TYPE_TABS"><button class="vb on">Ingresos</button><button class="vb">Cantidad</button></div>
-    <button class="btn bg sm" id="BTN_ZOOM_OUT">-</button>
+  <div class="fb" style="align-items:flex-start">
+    <div class="plan-head" style="flex:1">
+      <h2>Planificacion de demanda e inventario</h2>
+      <div class="plan-sub">Proyeccion de las proximas semanas: cuanto vas a vender, cuanto inventario tendras y cuanto conviene pedir para no quedarte sin stock ni acumular de mas.</div>
+    </div>
+    <div class="vt" id="PLAN_TYPE_TABS" title="Cambia entre ver el plan en dinero o en unidades"><button class="vb on">Ingresos</button><button class="vb">Cantidad</button></div>
+    <button class="btn bg sm" id="BTN_ZOOM_OUT" title="Menos semanas">&minus;</button>
     <span id="ZOOM_LABEL" style="font-size:12px;color:var(--t3);min-width:46px;text-align:center">24 sem.</span>
-    <button class="btn bg sm" id="BTN_ZOOM_IN">+</button>
+    <button class="btn bg sm" id="BTN_ZOOM_IN" title="Mas semanas">+</button>
   </div>
-  <div class="ptw"><table class="pt" id="PLAN_TABLE"><thead><tr id="PLAN_HEAD"></tr></thead><tbody id="PLAN_BODY"></tbody></table></div>
+
+  <!-- LECTURA DEL PLAN: que te dice esta seccion, en lenguaje claro -->
+  <div class="ins-grid" id="PLAN_INSIGHTS"></div>
+
+  <!-- GRAFICOS separados por escala -->
   <div class="pl-row">
     <div class="pl-main">
-      <div class="ct-tabs">
+      <div class="ct-tabs" style="display:none">
         <button class="ctab on" id="CTAB_ing">Ingresos</button>
         <button class="ctab" id="CTAB_cant">Cantidad</button>
       </div>
-      <div style="flex:1;padding:10px 13px 4px;min-height:200px"><div style="height:200px"><canvas id="MAIN_CHART"></canvas></div></div>
-      <div class="cl">
-        <span><span class="ld" style="background:#94a3b8"></span>Ventas reales</span>
-        <span><span class="ld" style="background:var(--G)"></span>Inventario proy.</span>
-        <span><span class="ld" style="background:var(--R)"></span>Pronostico final</span>
-        <span><span class="ld" style="background:var(--A)"></span>Plan pedidos</span>
+      <div class="chart-card">
+        <div class="cc-t" id="DEMAND_TITLE">Demanda: ventas reales vs pronostico</div>
+        <div class="cc-s">Lo que vendiste cada semana (linea solida) comparado con lo que el sistema proyecta que venderas (linea punteada). Si el pronostico sube, la demanda esta creciendo.</div>
+        <div class="chart-box"><canvas id="DEMAND_CHART"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-t">Inventario proyectado y pedidos sugeridos</div>
+        <div class="cc-s">El area azul es el stock que tendras semana a semana. Cuando baja del nivel de seguridad (linea roja) hay riesgo de quiebre; las barras naranjas son los pedidos que el sistema recomienda lanzar.</div>
+        <div class="chart-box tall"><canvas id="INV_CHART"></canvas></div>
       </div>
     </div>
     <div class="rp">
       <div style="display:flex;border-bottom:1px solid var(--bd)">
-        <button class="rt on" id="RP_kpi">KPIs</button>
+        <button class="rt on" id="RP_kpi">Resumen</button>
         <button class="rt" id="RP_prev">Prevision</button>
         <button class="rt" id="RP_inv">Inventario</button>
       </div>
@@ -415,6 +456,21 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
       </div>
     </div>
   </div>
+
+  <!-- Que significa cada fila de la tabla -->
+  <details class="metric-help">
+    <summary>Que significa cada fila de la tabla</summary>
+    <div class="mh-body">
+      <div class="mh-item"><span class="mh-dot" style="background:var(--t1)"></span><div><span class="mh-name">Ventas reales / Ingresos.</span> <span class="mh-desc">Lo que realmente vendiste cada semana, en unidades o en dinero. Es tu historial, no una estimacion.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--R)"></span><div><span class="mh-name">Pronostico estadistico.</span> <span class="mh-desc">La demanda esperada calculada con la tendencia de tus ventas recientes. Es la base neutra del pronostico.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--A)"></span><div><span class="mh-name">Pronostico final.</span> <span class="mh-desc">El pronostico ajustado con un margen de seguridad. Es la cifra que usa el sistema para recomendar pedidos.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--t4)"></span><div><span class="mh-name">Precio promedio.</span> <span class="mh-desc">Precio medio de venta por unidad en esa semana. Sirve para convertir unidades en dinero.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--B)"></span><div><span class="mh-name">Inventario proyectado.</span> <span class="mh-desc">El stock estimado que tendras al cierre de cada semana, restando ventas y sumando pedidos. Si llega a cero, hay riesgo de quiebre.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--P)"></span><div><span class="mh-name">Plan de pedidos.</span> <span class="mh-desc">Las unidades que conviene pedir esa semana para mantener el inventario por encima del nivel de seguridad.</span></div></div>
+    </div>
+  </details>
+
+  <div class="ptw"><table class="pt" id="PLAN_TABLE"><thead><tr id="PLAN_HEAD"></tr></thead><tbody id="PLAN_BODY"></tbody></table></div>
 </div>
 
 </div>
@@ -437,6 +493,7 @@ var sinSortK = 'dias_sin', sinSortA = false;
 var zoomOpts = [8,12,16,24,36,44];
 var artRows = [], ocRows = [];
 var hideSin = false, hideC = false;
+var _demandChart = null, _invChart = null;
 
 var FAM_COLORS = {
   'MISCELANIA':'#2563eb','SELLOS':'#7c3aed','PERNERIA':'#d97706',
@@ -1442,55 +1499,122 @@ function renderPlanTable() {
   document.getElementById('PLAN_HEAD').innerHTML = '<th>Metrica / Semana</th>' + ws.map(function(w){return '<th style="text-align:right">'+w.f.slice(5)+'</th>';}).join('');
   var ui = chartType === 'ing';
   var rows = [
-    {l:'Ventas reales',k:ui?'ing':'v',color:'var(--t1)',fw:600,bg:''},
-    {l:'Pronost. estadistico',k:'pe',color:'var(--R)',fw:400,bg:'rfc'},
-    {l:'Pronost. final',k:'pf',color:'var(--A)',fw:700,bg:'rfc'},
-    {l:'Precio promedio',k:'pr',color:'var(--t4)',fw:400,bg:'',fmt:function(v){return '$'+v.toFixed(2);}},
-    {l:'Ingresos',k:'ing',color:'var(--G)',fw:700,bg:'',fmt:function(v){return v>0?fmt(v):''}},
-    {l:'Inv. proyectado',k:'inv',color:'var(--B)',fw:400,bg:''},
-    {l:'Plan de pedidos',k:'pp',color:'var(--P)',fw:700,bg:'rpc'}
+    {l:'Ventas reales',k:ui?'ing':'v',color:'var(--t1)',fw:600,bg:'',t:'Lo que realmente vendiste cada semana'},
+    {l:'Pronost. estadistico',k:'pe',color:'var(--R)',fw:400,bg:'rfc',t:'Demanda esperada segun la tendencia reciente'},
+    {l:'Pronost. final',k:'pf',color:'var(--A)',fw:700,bg:'rfc',t:'Pronostico con margen de seguridad (base para pedidos)'},
+    {l:'Precio promedio',k:'pr',color:'var(--t4)',fw:400,bg:'',fmt:function(v){return '$'+v.toFixed(2);},t:'Precio medio de venta por unidad'},
+    {l:'Ingresos',k:'ing',color:'var(--G)',fw:700,bg:'',fmt:function(v){return v>0?fmt(v):''},t:'Ventas convertidas a dinero'},
+    {l:'Inv. proyectado',k:'inv',color:'var(--B)',fw:400,bg:'',t:'Stock estimado al cierre de cada semana'},
+    {l:'Plan de pedidos',k:'pp',color:'var(--P)',fw:700,bg:'rpc',t:'Unidades que conviene pedir esa semana'}
   ];
   document.getElementById('PLAN_BODY').innerHTML = rows.map(function(r) {
-    return '<tr><td>'+r.l+'</td>'+ws.map(function(w){
-      return '<td class="'+r.bg+'" style="text-align:right;color:'+r.color+';font-weight:'+r.fw+'">'
-        +(r.fmt?r.fmt(w[r.k]||0):Math.round(w[r.k]||0).toLocaleString())+'</td>';
+    return '<tr><td title="'+r.t+'" style="font-weight:600">'+r.l+'</td>'+ws.map(function(w){
+      return '<td class="'+r.bg+'" style="text-align:right;color:'+r.color+';font-weight:'+r.fw+';font-variant-numeric:tabular-nums">'
+        +(r.fmt?r.fmt(w[r.k]||0):Math.round(w[r.k]||0).toLocaleString('es-PE'))+'</td>';
     }).join('')+'</tr>';
   }).join('');
+  renderPlanInsights();
 }
 
 function renderMainChart() {
-  var cvs = document.getElementById('MAIN_CHART'); if (!cvs) return;
-  var W = cvs.offsetWidth || 700, H = 200;
-  cvs.width = W; cvs.height = H;
-  var ctx = cvs.getContext('2d'); ctx.clearRect(0,0,W,H);
-  var ws = getWeeks(), pad = {l:58,r:14,t:12,b:26};
-  var cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
+  if (!D || typeof Chart === 'undefined') {
+    if (typeof Chart === 'undefined') {
+      var dc = document.getElementById('DEMAND_CHART');
+      if (dc && dc.parentNode) dc.parentNode.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:12px;text-align:center;padding:20px">No se pudo cargar la libreria de graficos. Verifica tu conexion y recarga.</div>';
+    }
+    return;
+  }
+  var ws = getWeeks();
+  var labels = ws.map(function(w){return w.f.slice(5);});
   var ui = chartType === 'ing';
-  var series = [
-    {k:ui?'ing':'v',c:'#94a3b8',d:[],lw:2},
-    {k:'inv',c:'#16a34a',d:[4,3],lw:1.5},
-    {k:'pf',c:'#ef4444',d:[5,3],lw:1.5},
-    {k:'pp',c:'#d97706',d:[3,3],lw:1.5}
+  var moneyFmt = function(v){ return v>=1e6 ? '$'+(v/1e6).toFixed(2)+'M' : v>=1000 ? '$'+(v/1000).toFixed(0)+'K' : '$'+Math.round(v); };
+  var unitFmt = function(v){ return Math.round(v).toLocaleString('es-PE')+' ud'; };
+  var axisFmt = ui ? moneyFmt : function(v){return Math.round(v).toLocaleString('es-PE');};
+  var commonOpts = function(valFmt){ return {
+    responsive:true, maintainAspectRatio:false, animation:{duration:300},
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{position:'top', align:'end', labels:{boxWidth:12, boxHeight:12, usePointStyle:true, font:{size:11, family:'Inter'}, color:'#374151'}},
+      tooltip:{
+        backgroundColor:'#0f172a', titleFont:{size:11, family:'Inter'}, bodyFont:{size:12, family:'Inter'}, padding:10, cornerRadius:7, displayColors:true,
+        callbacks:{ label:function(c){ return ' '+c.dataset.label+': '+valFmt(c.parsed.y); } }
+      }
+    },
+    scales:{
+      x:{grid:{display:false}, ticks:{font:{size:10, family:'Inter'}, color:'#94a3b8', maxRotation:0, autoSkip:true, maxTicksLimit:9}},
+      y:{beginAtZero:true, grid:{color:'#f1f5f9'}, border:{display:false}, ticks:{font:{size:10, family:'Inter'}, color:'#94a3b8', callback:function(v){return axisFmt(v);}}}
+    }
+  };};
+
+  // --- Grafico 1: Demanda (real vs pronostico) ---
+  var realKey = ui ? 'ing' : 'v';
+  var realData = ws.map(function(w){return Math.round(w[realKey]||0);});
+  var foreData = ws.map(function(w){return Math.round(ui ? (w.pf||0)*(w.pr||0) : (w.pf||0));});
+  document.getElementById('DEMAND_TITLE').textContent = ui ? 'Demanda: ingresos reales vs pronostico' : 'Demanda: ventas reales vs pronostico';
+  var dData = {
+    labels:labels,
+    datasets:[
+      {label: ui?'Ingresos reales':'Ventas reales', data:realData, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.08)', borderWidth:2.5, fill:true, tension:.3, pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor:'#2563eb'},
+      {label:'Pronostico', data:foreData, borderColor:'#d97706', backgroundColor:'transparent', borderWidth:2, borderDash:[6,4], fill:false, tension:.3, pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor:'#d97706'}
+    ]
+  };
+  if (_demandChart) _demandChart.destroy();
+  _demandChart = new Chart(document.getElementById('DEMAND_CHART'), {type:'line', data:dData, options:commonOpts(ui?moneyFmt:unitFmt)});
+
+  // --- Grafico 2: Inventario proyectado + pedidos + nivel de seguridad (siempre en unidades) ---
+  var invData = ws.map(function(w){return Math.round(w.inv||0);});
+  var ppData = ws.map(function(w){return Math.round(w.pp||0);});
+  var pfAvg = ws.length ? ws.reduce(function(a,w){return a+(w.pf||0);},0)/ws.length : 0;
+  var safety = Math.round(pfAvg); // nivel de seguridad = demanda esperada media de una semana
+  var safetyData = ws.map(function(){return safety;});
+  var iData = {
+    labels:labels,
+    datasets:[
+      {type:'line', label:'Inventario proyectado', data:invData, borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.12)', borderWidth:2, fill:true, tension:.25, pointRadius:0, pointHoverRadius:5, order:2},
+      {type:'line', label:'Nivel de seguridad', data:safetyData, borderColor:'#dc2626', backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], fill:false, pointRadius:0, order:1},
+      {type:'bar', label:'Pedidos sugeridos', data:ppData, backgroundColor:'rgba(217,119,6,.75)', borderRadius:3, maxBarThickness:22, order:3}
+    ]
+  };
+  var iOpts = commonOpts(function(v){return Math.round(v).toLocaleString('es-PE')+' ud';});
+  iOpts.scales.y.ticks.callback = function(v){return Math.round(v).toLocaleString('es-PE');};
+  if (_invChart) _invChart.destroy();
+  _invChart = new Chart(document.getElementById('INV_CHART'), {type:'bar', data:iData, options:iOpts});
+}
+
+// Lectura del plan en lenguaje claro: que esta pasando y que conviene hacer
+function renderPlanInsights() {
+  var box = document.getElementById('PLAN_INSIGHTS'); if (!box || !D) return;
+  var ws = getWeeks(); if (!ws.length) { box.innerHTML=''; return; }
+  var n = ws.length;
+  // 1) Tendencia de demanda: ultimas 4 sem vs 4 previas (en unidades)
+  var rec = ws.slice(-4), prev = ws.slice(-8,-4);
+  var avg = function(a,k){return a.length? a.reduce(function(s,w){return s+(w[k]||0);},0)/a.length : 0;};
+  var dRec = avg(rec,'v'), dPrev = avg(prev,'v');
+  var chg = dPrev>0 ? (dRec-dPrev)/dPrev*100 : 0;
+  var trClass = chg>5?'good':chg<-5?'bad':'info';
+  var trArrow = chg>5?'\u2197':chg<-5?'\u2198':'\u2192';
+  var trTxt = chg>5?'La demanda esta creciendo. Considera reforzar stock de los productos clase A.':chg<-5?'La demanda esta bajando. Evita sobrecomprar y revisa productos lentos.':'La demanda se mantiene estable.';
+  // 2) Punto mas bajo de inventario
+  var minInv = Infinity, minWk = '';
+  ws.forEach(function(w){ if((w.inv||0)<minInv){minInv=w.inv||0; minWk=w.f;} });
+  var pfAvg = avg(ws,'pf'), safety = Math.round(pfAvg);
+  var riskWeeks = ws.filter(function(w){return (w.inv||0)<safety;}).length;
+  var invClass = minInv<safety?'bad':minInv<safety*2?'warn':'good';
+  var invTxt = minInv<safety?'Hay semanas con riesgo de quiebre: el inventario cae por debajo del nivel de seguridad.':'El inventario proyectado se mantiene en niveles sanos.';
+  // 3) Pedidos sugeridos en el horizonte
+  var totPP = ws.reduce(function(s,w){return s+(w.pp||0);},0);
+  var totPPval = ws.reduce(function(s,w){return s+(w.pp||0)*(w.pr||0);},0);
+  // 4) Ingreso proyectado proximas 4 semanas (pronostico * precio)
+  var projIng = rec.reduce(function(s,w){return s+(w.pf||0)*(w.pr||0);},0);
+  var cards = [
+    {cls:trClass, label:'Tendencia de demanda', val:(chg>=0?'+':'')+chg.toFixed(0)+'% '+trArrow, desc:trTxt},
+    {cls:invClass, label:'Riesgo de inventario', val:riskWeeks+(riskWeeks===1?' semana':' semanas'), desc:invTxt},
+    {cls:'warn', label:'Pedidos sugeridos', val:Math.round(totPP).toLocaleString('es-PE')+' ud', desc:'Equivalen a aprox. '+fmt(totPPval)+' en compras en el horizonte mostrado.'},
+    {cls:'info', label:'Demanda proyectada 4 sem.', val:Math.round(rec.reduce(function(s,w){return s+(w.pf||0);},0)).toLocaleString('es-PE')+' ud', desc:'Equivale a unos '+fmt(projIng)+' en ventas estimadas.'}
   ];
-  var all = [];
-  ws.forEach(function(w){series.forEach(function(s){all.push(w[s.k]||0);});});
-  var maxV = Math.max.apply(null,all)*1.1||1;
-  function xi(i){return pad.l+i/(Math.max(ws.length-1,1))*cW;}
-  function yv(v){return pad.t+cH-(v/maxV)*cH;}
-  ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=1;
-  for(var g=0;g<=4;g++){var y=pad.t+g/4*cH; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();}
-  ctx.fillStyle='#94a3b8'; ctx.font='10px Inter,sans-serif'; ctx.textAlign='right';
-  for(var g2=0;g2<=4;g2++){var v3=maxV*(4-g2)/4; ctx.fillText(ui?(v3>=1e6?'$'+(v3/1e6).toFixed(1)+'M':v3>=1000?'$'+(v3/1000).toFixed(0)+'K':'$'+Math.round(v3)):Math.round(v3).toLocaleString(),pad.l-5,pad.t+g2/4*cH+3);}
-  ctx.textAlign='center'; ctx.fillStyle='#94a3b8'; ctx.font='9px Inter,sans-serif';
-  var step=Math.ceil(ws.length/8);
-  ws.forEach(function(w,i){if(i%step===0)ctx.fillText(w.f.slice(5),xi(i),H-5);});
-  series.forEach(function(s){
-    ctx.beginPath(); ctx.strokeStyle=s.c; ctx.lineWidth=s.lw; ctx.setLineDash(s.d);
-    ws.forEach(function(w,i){var v2=w[s.k]||0; i===0?ctx.moveTo(xi(i),yv(v2)):ctx.lineTo(xi(i),yv(v2));});
-    ctx.stroke(); ctx.setLineDash([]);
-    var last=ws[ws.length-1];
-    ctx.beginPath(); ctx.arc(xi(ws.length-1),yv(last[s.k]||0),3,0,Math.PI*2); ctx.fillStyle=s.c; ctx.fill();
-  });
+  box.innerHTML = cards.map(function(c){
+    return '<div class="ins '+c.cls+'"><div class="ins-l">'+c.label+'</div><div class="ins-v">'+c.val+'</div><div class="ins-d">'+c.desc+'</div></div>';
+  }).join('');
 }
 
 function setChartType(t) { chartType=t; renderPlanTable(); renderMainChart(); }
@@ -2082,7 +2206,9 @@ function exportAll() {
   XLSX.writeFile(wb, 'TractorPlan_COMPLETO_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
-window.addEventListener('resize', function(){if(D)renderMainChart();});
+window.addEventListener('resize', function(){
+  if (D) { var p = document.getElementById('PAGE_plan'); if (p && p.classList.contains('on')) renderMainChart(); }
+});
 
 </script>
 </body>
