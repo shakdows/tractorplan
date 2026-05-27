@@ -151,6 +151,35 @@ canvas{display:block;}
 .repo-sum b{font-weight:800;color:var(--t1);}
 .repo-sum .sep{color:var(--bd);}
 .bDesc{background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700;white-space:nowrap;text-decoration:line-through;}
+/* Modal mejorado */
+.pm-section{background:var(--b3);border:1px solid var(--bd);border-radius:8px;padding:13px;margin-bottom:14px;}
+.pm-section-title{font-size:11.5px;font-weight:700;color:var(--t2);margin-bottom:9px;text-transform:uppercase;letter-spacing:.3px;}
+.pm-hist-meta{font-size:11px;color:var(--t3);}
+/* Gauge de stock */
+.pm-gauge-wrap{margin-top:6px;}
+.pm-gauge-bar{position:relative;height:16px;background:#f1f5f9;border-radius:8px;overflow:visible;margin-bottom:18px;}
+.pm-gauge-fill{height:100%;border-radius:8px;transition:width .4s;}
+.pm-gauge-mark{position:absolute;top:-2px;bottom:-2px;width:2px;border-radius:1px;}
+.pm-gauge-sf{background:#22c55e;} .pm-gauge-rop{background:#f59e0b;} .pm-gauge-obj{background:#94a3b8;}
+.pm-gauge-mark span{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:9px;white-space:nowrap;color:var(--t4);font-weight:600;}
+.pm-gauge-leg{font-size:11px;color:var(--t3);display:flex;flex-wrap:wrap;gap:8px;}
+/* Repo grid */
+.pm-repo-grid{margin-top:8px;display:flex;flex-direction:column;gap:5px;}
+.pm-repo-row{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--t3);padding:5px 8px;background:var(--bg);border-radius:5px;}
+.pm-rv{font-weight:800;color:var(--t1);} .pm-rv.green{color:#16a34a;} .pm-rv.blue{color:#2563eb;}
+/* AI section */
+.pm-ai-wrap{border:1.5px solid #dbeafe;background:#eff6ff;}
+.pm-ai-wrap .pm-section-title{color:#1d4ed8;}
+.ai-box{font-size:12.5px;line-height:1.6;border-radius:7px;padding:11px;}
+.ai-idle{background:var(--b3);color:var(--t3);}
+.ai-loading{background:#eff6ff;color:#1d4ed8;display:flex;align-items:center;}
+.ai-result{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+.ai-result strong{color:#15803d;}
+.ai-result p{margin:0 0 8px;}
+.ai-result p:last-child{margin:0;}
+.ai-error{background:#fef2f2;color:#dc2626;}
+.ai-spinner{width:16px;height:16px;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
 .leyenda-panel{border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:10px;background:#f8fafc;overflow:hidden;}
 .leyenda-panel summary{padding:9px 15px;font-size:12.5px;font-weight:700;color:var(--t2);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:6px;}
 .leyenda-panel summary::-webkit-details-marker{display:none}
@@ -1965,6 +1994,11 @@ function renderRightPanel(t) {
 // ============================================================
 // PRODUCT DETAIL MODAL
 // ============================================================
+var MESES_CORTOS = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function fmtHistLabel(ym) {
+  var p = ym.split('-');
+  return MESES_CORTOS[parseInt(p[1]||0)] + "'" + (p[0]||'').slice(2);
+}
 function openProdModal(cod) {
   var r = D.items.find(function(i){return i.cod===cod;}); if (!r) return;
   var color = famColor(r.familia);
@@ -1973,72 +2007,135 @@ function openProdModal(cod) {
   var rp = calcRepo(r);
   var tc = r.tend&&r.tend.indexOf('CRECIENDO')>=0?'color:#16a34a':r.tend&&r.tend.indexOf('BAJANDO')>=0?'color:#dc2626':'color:#64748b';
 
-  var histHtml = hist.length>0
-    ? '<div class="card" style="margin-bottom:14px"><div class="ch"><div class="ct">Historial de Ventas Mensual</div><span style="font-size:11px;color:var(--t3)">Ultimos '+hist.length+' meses | Min:'+Math.min.apply(null,hist.map(function(h){return h.v;}))+' | Max:'+Math.max.apply(null,hist.map(function(h){return h.v;}))+' | Prom:'+(hist.reduce(function(a,h){return a+h.v;},0)/hist.length).toFixed(1)+' ud/mes</span></div><div style="height:105px"><canvas id="PROD_HIST_CHART" width="800" height="105"></canvas></div></div>'
-    : '<div style="padding:11px;background:var(--b3);border-radius:7px;font-size:12px;color:var(--t3);margin-bottom:13px;text-align:center">Historial disponible para top 300 articulos</div>';
+  // ── Gauge de stock: barra visual mostrando niveles
+  var maxGauge = Math.max(rp.objetivo*1.5, rp.stock||0, 1);
+  var pStock  = Math.min(100, ((rp.tieneStock?rp.stock:0)/maxGauge)*100);
+  var pSafety = Math.min(100, (rp.safety/maxGauge)*100);
+  var pRop    = Math.min(100, (rp.rop/maxGauge)*100);
+  var pObj    = Math.min(100, (rp.objetivo/maxGauge)*100);
+  var gaugeStockColor = !rp.tieneStock ? '#94a3b8' : (rp.stock <= rp.safety ? '#ef4444' : rp.stock <= rp.rop ? '#f59e0b' : '#22c55e');
+  var gaugeHtml = rp.tieneStock
+    ? '<div class="pm-gauge-wrap">'
+      +'<div class="pm-gauge-bar"><div class="pm-gauge-fill" style="width:'+pStock+'%;background:'+gaugeStockColor+'"></div>'
+      +'<div class="pm-gauge-mark pm-gauge-sf" style="left:'+pSafety+'%"><span>S.S.</span></div>'
+      +'<div class="pm-gauge-mark pm-gauge-rop" style="left:'+pRop+'%"><span>Reorden</span></div>'
+      +'<div class="pm-gauge-mark pm-gauge-obj" style="left:'+pObj+'%"><span>Objetivo</span></div>'
+      +'</div>'
+      +'<div class="pm-gauge-leg"><span style="color:'+gaugeStockColor+'">Stock actual: <b>'+fmtN(rp.stock)+' ud</b></span>'
+      +' · <span style="color:#94a3b8">S.S.: '+fmtN(rp.safety)+'</span>'
+      +' · <span style="color:#f59e0b">Reorden: '+fmtN(rp.rop)+'</span>'
+      +' · <span style="color:#64748b">Objetivo: '+fmtN(rp.objetivo)+'</span></div>'
+      +'</div>'
+    : '<div style="font-size:11px;color:var(--t4);padding:7px 0">Sin datos de stock en el archivo. Se asume 0 para el cálculo.</div>';
+
+  // ── Urgency banner
+  var urgBanners = {
+    urgente:      {bg:'#fef2f2', bc:'#fecaca', dot:'#ef4444', label:'🔴 REPONER YA — stock bajo el punto de reorden, pide ahora'},
+    pronto:       {bg:'#fffbeb', bc:'#fde68a', dot:'#f59e0b', label:'🟡 PEDIR PRONTO — stock justo, haz el pedido esta semana'},
+    ok:           {bg:'#f0fdf4', bc:'#bbf7d0', dot:'#22c55e', label:'🟢 STOCK OK — cobertura suficiente por ahora'},
+    evaluar:      {bg:'#f8fafc', bc:'#e2e8f0', dot:'#64748b', label:'⚪ EVALUAR — sin historial de stock, revisar manualmente'},
+    descontinuar: {bg:'#f8fafc', bc:'#cbd5e1', dot:'#94a3b8', label:'⛔ YA NO COMPRAR — '+rp.meses_sin+' meses sin venderse, candidato a liquidar'}
+  };
+  var ub = urgBanners[rp.urg] || urgBanners.evaluar;
+
+  // ── Mini trend chart (sparkline textual)
+  var acPct = r.acel_pct;
+  var acColor = acPct >= 50 ? '#16a34a' : acPct >= 0 ? '#d97706' : '#dc2626';
+  var acArrow = acPct >= 50 ? '↑↑' : acPct >= 10 ? '↑' : acPct >= -10 ? '→' : acPct >= -50 ? '↓' : '↓↓';
+
+  // ── Historial
+  var histHtml = hist.length > 0
+    ? '<div class="pm-section"><div class="pm-section-title">📊 Historial de ventas mensual</div>'
+      +'<div class="pm-hist-meta">Últimos '+hist.length+' meses &nbsp;·&nbsp; '
+      +'Min: <b>'+Math.min.apply(null,hist.map(function(h){return h.v;}))+' ud</b> &nbsp;·&nbsp; '
+      +'Max: <b>'+Math.max.apply(null,hist.map(function(h){return h.v;}))+' ud</b> &nbsp;·&nbsp; '
+      +'Prom: <b>'+(hist.reduce(function(a,h){return a+h.v;},0)/hist.length).toFixed(1)+' ud/mes</b>'
+      +'</div>'
+      +'<div style="height:120px;margin-top:6px"><canvas id="PROD_HIST_CHART" width="800" height="120"></canvas></div></div>'
+    : '<div class="pm-section"><div style="padding:11px;background:var(--b3);border-radius:7px;font-size:12px;color:var(--t3);text-align:center">Historial disponible para los top 300 artículos</div></div>';
 
   document.getElementById('PROD_BOX').innerHTML =
+    // ─── HEADER ───────────────────────────────────────────
     '<div class="prod-head">'
     +'<div style="width:46px;height:46px;border-radius:11px;background:'+color+'18;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+famIcon(r.familia)+'</div>'
     +'<div style="flex:1">'
     +'<div style="font-size:11px;font-family:monospace;color:var(--t3);margin-bottom:2px">'+(r.cod_disp||r.cod)+' &middot; <span class="bmk">'+r.marca+'</span></div>'
     +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">'+r.nombre+'</div>'
-    +'<div style="display:flex;align-items:center;gap:7px">'
+    +'<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">'
     +'<span class="bfam" style="background:'+color+'18;color:'+color+'">'+famIcon(r.familia)+' '+r.familia+'</span>'
-    +'<span class="b'+r.clase+'2">'+r.clase+'</span>'
+    +'<span class="b'+r.clase+'2">Clase '+r.clase+'</span>'
     +'<span style="font-size:12px;font-weight:700;'+tc+'">'+r.tend+'</span>'
+    +'<span style="font-size:12px;font-weight:700;color:'+acColor+'">'+acArrow+' '+fmtPct(r.acel_pct)+' (3m vs 3m)</span>'
     +'</div></div>'
     +'<button onclick="closeProdModal()" class="btn bg sm">\u2715 Cerrar</button>'
     +'</div>'
+
+    // ─── URGENCY BANNER ────────────────────────────────────
+    +'<div style="margin:0 22px;padding:9px 13px;background:'+ub.bg+';border:1.5px solid '+ub.bc+';border-radius:8px;font-size:12px;font-weight:700;color:#374151;display:flex;align-items:center;gap:8px">'
+    +'<span style="width:9px;height:9px;border-radius:50%;background:'+ub.dot+';flex-shrink:0;display:inline-block"></span>'
+    +ub.label+'</div>'
+
     +'<div class="prod-body">'
+
+    // ─── KPIs ───────────────────────────────────────────────
     +'<div class="sg">'
-    +'<div class="stat-box"><div class="sl">Ingresos Totales</div><div class="sv" style="color:var(--G)">'+fmt(r.ing_tot)+'</div><div class="ss">'+r.n_trans+' transacciones</div></div>'
-    +'<div class="stat-box"><div class="sl">Precio Promedio</div><div class="sv">$'+r.precio.toFixed(2)+'</div><div class="ss">USD por unidad</div></div>'
-    +'<div class="stat-box"><div class="sl">Ventas Ult. 6m</div><div class="sv" style="color:var(--B)">'+fmtN(r.u6m)+' ud</div><div class="ss">'+fmt(r.ing6m)+'</div></div>'
-    +'<div class="stat-box"><div class="sl">Rotacion</div><div class="sv" style="color:'+(r.meses_activo>=36?'#16a34a':'#d97706')+'">'+r.meses_activo+'/44</div><div class="ss">meses activos</div></div>'
+    +'<div class="stat-box"><div class="sl">Ingresos totales</div><div class="sv" style="color:var(--G)">'+fmt(r.ing_tot)+'</div><div class="ss">'+r.n_trans+' transacciones</div></div>'
+    +'<div class="stat-box"><div class="sl">Precio promedio</div><div class="sv">$'+r.precio.toFixed(2)+'</div><div class="ss">USD por unidad</div></div>'
+    +'<div class="stat-box"><div class="sl">Ventas últ. 6 meses</div><div class="sv" style="color:var(--B)">'+fmtN(r.u6m)+' ud</div><div class="ss">'+fmt(r.ing6m)+'</div></div>'
+    +'<div class="stat-box"><div class="sl">Demanda proyectada</div><div class="sv" style="color:var(--A)">'+rp.demMes.toFixed(1)+' <span style="font-size:11px;font-weight:500">ud/mes</span></div><div class="ss">Variab. ±'+rp.sd.toFixed(1)+' ud</div></div>'
     +'</div>'
+
+    // ─── GAUGE DE STOCK ─────────────────────────────────────
+    +'<div class="pm-section">'
+    +'<div class="pm-section-title">📦 Estado del stock</div>'
+    + gaugeHtml
+    +'</div>'
+
+    // ─── MODELO + ACCIÓN ────────────────────────────────────
     +'<div class="gg">'
-    +'<div class="gb"><div class="gbt">Modelo de reposicion &mdash; cuanto comprar</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
-    +'<div><div style="font-size:10px;color:var(--t4);font-weight:600;text-transform:uppercase;margin-bottom:2px">Demanda proyectada</div><div style="font-size:17px;font-weight:800;color:var(--A)">'+rp.demMes.toFixed(1)+' <span style="font-size:11px;font-weight:500">ud/mes</span></div></div>'
-    +'<div><div style="font-size:10px;color:var(--t4);font-weight:600;text-transform:uppercase;margin-bottom:2px">Variabilidad (&plusmn;)</div><div style="font-size:17px;font-weight:800;color:var(--t2)">'+rp.sd.toFixed(1)+' <span style="font-size:11px;font-weight:500">ud/mes</span></div></div>'
-    +'</div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Stock de seguridad:</b> <span style="font-weight:800;color:var(--G)">'+fmtN(rp.safety)+' unidades</span> <span style="color:var(--t4)">(servicio '+REPO.srv+'%)</span></div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Punto de reorden:</b> <span style="font-weight:800;color:var(--t1)">'+fmtN(rp.rop)+' unidades</span></div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Inventario objetivo:</b> <span style="font-weight:800;color:var(--t1)">'+fmtN(rp.objetivo)+' unidades</span> <span style="color:var(--t4)">('+REPO.cob+'m + seguridad)</span></div>'
-    +(rp.tieneStock
-      ? '<div style="font-size:11px;color:var(--t3);margin-bottom:5px"><b>Stock actual:</b> <span style="font-weight:800;color:'+(rp.cobDias<REPO.lead?'#dc2626':rp.cobDias<REPO.lead*2?'#d97706':'#16a34a')+'">'+fmtN(rp.stock)+' unidades</span> &middot; '+(rp.cobDias>=999?'+999':rp.cobDias)+' dias de cobertura</div>'
-      : '<div style="font-size:11px;color:var(--t4);margin-bottom:5px">Sin stock en el archivo: se asume 0 (objetivo de cobertura)</div>')
-    +(rp.urg==='descontinuar'
-      ? '<div style="margin-top:10px;padding:11px;background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:8px">'
-        +'<div style="font-size:10px;color:var(--t4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Recomendacion</div>'
-        +'<div style="font-size:22px;font-weight:900;color:#475569;line-height:1.1;text-decoration:line-through">YA NO COMPRAR</div>'
-        +'<div style="font-size:12px;color:var(--t3);margin-top:4px">Lleva <b>'+rp.meses_sin+' meses</b> sin venderse (umbral: '+REPO.descMonths+'m). Candidato a liquidar o descontinuar para liberar capital.</div>'
-        +'</div>'
-      : '<div style="margin-top:10px;padding:11px;background:'+(rp.comprar>0?'#fffbeb':'#f0fdf4')+';border:1.5px solid '+(rp.comprar>0?'#fde68a':'#bbf7d0')+';border-radius:8px">'
-        +'<div style="font-size:10px;color:var(--t4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Cantidad recomendada a comprar</div>'
-        +'<div style="font-size:24px;font-weight:900;color:'+(rp.comprar>0?'#b45309':'#15803d')+';line-height:1.1">'+(rp.comprar>0?fmtN(rp.comprar)+' <span style="font-size:13px;font-weight:600">unidades</span>':'No requiere pedido')+'</div>'
-        +(rp.comprar>0?'<div style="font-size:12px;color:var(--t3);margin-top:3px">Inversion estimada: <b style="color:var(--B)">'+fmt(rp.monto)+' USD</b></div>':'')
-        +'</div>')
-    +'</div>'
-    +'<div class="gb"><div class="gbt">Oferta vs Demanda</div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:6px"><b>Monto OC estimado:</b> <span style="font-weight:800;color:var(--B)">'+fmt(r.monto_oc)+' USD</span></div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:6px"><b>Dias sin movimiento:</b> <span style="font-weight:800;color:'+(r.dias_sin>90?'#dc2626':r.dias_sin>30?'#d97706':'#16a34a')+'">'+r.dias_sin+' dias</span></div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:6px"><b>Tendencia:</b> <span style="font-weight:800;'+tc+'">'+r.tend+'</span></div>'
-    +'<div style="font-size:11px;color:var(--t3);margin-bottom:4px"><b>Crecimiento 3m vs 3m:</b> <span style="font-weight:800;color:'+(r.acel_pct>=0?'#16a34a':'#dc2626')+'">'+fmtPct(r.acel_pct)+'</span></div>'
-    +'<div style="margin-top:10px;padding:8px;background:'+(r.clase==='A'&&r.dias_sin<30?'#f0fdf4':r.dias_sin>365?'#fee2e2':'#fef3c7')+';border-radius:6px;font-size:11px;font-weight:700;color:'+(r.clase==='A'&&r.dias_sin<30?'#15803d':r.dias_sin>365?'#dc2626':'#92400e')+'">'
-    +(r.clase==='A'&&r.dias_sin<30?'ACTIVO - Mantener stock siempre':r.clase==='A'&&r.dias_sin>=90?'CLASE A PARADO - Revisar urgente':r.dias_sin>365?'LIQUIDAR - Sin movimiento +365d':r.acel_pct>=200?'IMPORTAR - Demanda explosiva':r.accion_sin)
+    +'<div class="gb"><div class="gbt">📐 Modelo de reposición</div>'
+    +'<div class="pm-repo-grid">'
+    +'<div class="pm-repo-row"><span>Stock de seguridad</span><span class="pm-rv green">'+fmtN(rp.safety)+' ud</span></div>'
+    +'<div class="pm-repo-row"><span>Punto de reorden</span><span class="pm-rv blue">'+fmtN(rp.rop)+' ud</span></div>'
+    +'<div class="pm-repo-row"><span>Inventario objetivo</span><span class="pm-rv">'+fmtN(rp.objetivo)+' ud</span></div>'
+    +'<div class="pm-repo-row"><span>Nivel de servicio</span><span class="pm-rv">'+REPO.srv+'%</span></div>'
+    +'<div class="pm-repo-row"><span>Tiempo de entrega</span><span class="pm-rv">'+REPO.lead+' días</span></div>'
     +'</div></div>'
-    +'</div>'
+
+    +'<div class="gb"><div class="gbt">🛒 Decisión de compra</div>'
+    +(rp.urg === 'descontinuar'
+      ? '<div style="padding:13px;background:#f1f5f9;border:1.5px solid #cbd5e1;border-radius:8px;margin-top:6px">'
+        +'<div style="font-size:22px;font-weight:900;color:#475569;text-decoration:line-through;line-height:1.1">NO COMPRAR</div>'
+        +'<div style="font-size:12px;color:var(--t3);margin-top:6px">Lleva <b>'+rp.meses_sin+' meses</b> sin venderse (umbral configurado: '+REPO.descMonths+'m). Candidato a liquidar o descontinuar para liberar capital.</div>'
+        +'</div>'
+      : '<div style="padding:13px;background:'+(rp.comprar>0?'#fffbeb':'#f0fdf4')+';border:1.5px solid '+(rp.comprar>0?'#fde68a':'#bbf7d0')+';border-radius:8px;margin-top:6px">'
+        +'<div style="font-size:11px;color:var(--t4);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Cantidad recomendada a pedir ahora</div>'
+        +'<div style="font-size:28px;font-weight:900;color:'+(rp.comprar>0?'#b45309':'#15803d')+';line-height:1.1">'
+        +(rp.comprar>0 ? fmtN(rp.comprar)+' <span style="font-size:14px;font-weight:600">unidades</span>' : 'No requiere pedido')+'</div>'
+        +(rp.comprar>0?'<div style="font-size:12px;color:var(--t3);margin-top:4px">Inversión estimada: <b style="color:var(--B)">'+fmt(rp.monto)+' USD</b></div>':'')
+        +'</div>')
+    +'</div></div>'
+
+    // ─── HISTORIAL ───────────────────────────────────────────
     + histHtml
+
+    // ─── AI ANALYSIS ─────────────────────────────────────────
+    +'<div class="pm-section pm-ai-wrap">'
+    +'<div class="pm-section-title">🤖 Análisis estratégico con IA</div>'
+    +'<div id="AI_ANALYSIS_BOX" class="ai-box ai-idle">Presiona el botón para que la IA analice este artículo y genere un plan estratégico de compras.</div>'
+    +'<button class="btn bB sm" style="margin-top:9px" onclick="generateAIAnalysis(\''+r.cod+'\')">✨ Generar análisis con IA</button>'
+    +'</div>'
+
+    // ─── ACCIONES ────────────────────────────────────────────
     +'<div style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border:1.5px solid #fde68a;border-radius:8px;padding:13px">'
-    +'<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:9px">Acciones - Area de Compras e Importaciones</div>'
+    +'<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:9px">⚡ Acciones — Compras e Importaciones</div>'
     +'<div style="display:flex;gap:7px;flex-wrap:wrap">'
-    +'<button class="btn bA sm" onclick="dlOneProd(\''+r.cod+'\')">Ficha del articulo</button>'
+    +'<button class="btn bA sm" onclick="dlOneProd(\''+r.cod+'\')">Ficha del artículo</button>'
     +'<button class="btn bB sm" onclick="dlSection(\'planoc\');closeProdModal()">Ver Plan OC</button>'
-    +(r.clase==='A'?'<button class="btn bR sm" onclick="dlSection(\'reponer\');closeProdModal()">Plan Reposicion</button>':'')
+    +(r.clase==='A'?'<button class="btn bR sm" onclick="dlSection(\'reponer\');closeProdModal()">Plan Reposición</button>':'')
     +(r.acel_pct>=200?'<button class="btn bg sm" onclick="dlSection(\'imp\');closeProdModal()">Importar Urgente</button>':'')
     +'</div></div>'
+
     +'</div>';
 
   document.getElementById('PROD_MODAL').style.display = 'block';
@@ -2051,25 +2148,87 @@ function drawProdHistChart(cod) {
   var cvs = document.getElementById('PROD_HIST_CHART'); if(!cvs) return;
   var r = D.items.find(function(i){return i.cod===cod;});
   var color = r ? famColor(r.familia) : '#2563eb';
-  var W=cvs.offsetWidth||800, H=105;
+  var W=cvs.offsetWidth||800, H=120;
   cvs.width=W; cvs.height=H;
   var ctx=cvs.getContext('2d'); ctx.clearRect(0,0,W,H);
-  var vals=hist.map(function(h){return h.v;}), mn=0, mx=Math.max.apply(null,vals)||1;
-  var pad={l:40,r:10,t:7,b:20}, cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
-  function xi(i){return pad.l+i/(Math.max(hist.length-1,1))*cW;}
-  function yv(v){return pad.t+cH-(v-mn)/(mx-mn||1)*cH*0.88;}
+  var vals=hist.map(function(h){return Math.max(0,h.v);}), mn=0, mx=Math.max.apply(null,vals)||1;
+  var pad={l:38,r:10,t:8,b:24}, cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+  var bw=Math.max(3, cW/hist.length*0.7);
+  function xi(i){return pad.l+(i+0.5)/(hist.length)*cW;}
+  function yv(v){return pad.t+cH-(v-mn)/(mx-mn||1)*cH*0.92;}
+  // Grid lines
   ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=1;
-  for(var g=0;g<=3;g++){var y=pad.t+g/3*cH; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();}
-  var bw=Math.max(2,cW/hist.length-2);
-  hist.forEach(function(h,i){var x=xi(i)-bw/2, y=yv(h.v), hh=Math.max(1,pad.t+cH-y); ctx.fillStyle=color+'99'; ctx.fillRect(x,y,bw,hh);});
+  for(var g=0;g<=4;g++){var y=pad.t+g/4*cH; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();}
+  // Bars
+  hist.forEach(function(h,i){
+    var x=xi(i)-bw/2, hh=Math.max(2,yv(mn)-yv(Math.max(0,h.v)));
+    ctx.fillStyle= h.v<0 ? '#fca5a5' : color+'bb';
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,yv(Math.max(0,h.v)),bw,hh,2) : ctx.rect(x,yv(Math.max(0,h.v)),bw,hh);
+    ctx.fill();
+  });
+  // Line
   ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=2;
-  hist.forEach(function(h,i){i===0?ctx.moveTo(xi(i),yv(h.v)):ctx.lineTo(xi(i),yv(h.v));});
+  hist.forEach(function(h,i){i===0?ctx.moveTo(xi(i),yv(Math.max(0,h.v))):ctx.lineTo(xi(i),yv(Math.max(0,h.v)));});
   ctx.stroke();
+  // X labels — fechas legibles: "Jul'23"
   ctx.fillStyle='#94a3b8'; ctx.font='9px Inter,sans-serif'; ctx.textAlign='center';
-  var step=Math.ceil(hist.length/7);
-  hist.forEach(function(h,i){if(i%step===0)ctx.fillText(h.m.slice(5),xi(i),H-4);});
+  var step=Math.ceil(hist.length/8);
+  hist.forEach(function(h,i){
+    if(i%step===0) ctx.fillText(fmtHistLabel(h.m), xi(i), H-5);
+  });
+  // Y labels
   ctx.textAlign='right';
-  for(var g2=0;g2<=3;g2++){var v2=mx*(3-g2)/3; ctx.fillText(Math.round(v2),pad.l-3,pad.t+g2/3*cH+3);}
+  for(var g2=0;g2<=4;g2++){var v2=mx*(4-g2)/4; ctx.fillText(Math.round(v2),pad.l-4,pad.t+g2/4*cH+3);}
+}
+
+// Genera un análisis estratégico con IA para el artículo
+async function generateAIAnalysis(cod) {
+  var r = D.items.find(function(i){return i.cod===cod;}); if(!r) return;
+  var rp = calcRepo(r);
+  var box = document.getElementById('AI_ANALYSIS_BOX'); if(!box) return;
+  box.className = 'ai-box ai-loading';
+  box.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><div class="ai-spinner"></div><span>La IA está analizando el artículo...</span></div>';
+
+  var prompt = 'Eres un experto en supply chain de repuestos para maquinaria pesada (marca CTP/Caterpillar), trabajando para una empresa distribuidora en Perú.\n\n'
+    +'Analiza el siguiente artículo y genera un PLAN ESTRATÉGICO CONCISO en español:\n\n'
+    +'Artículo: '+r.nombre+' (código: '+(r.cod_disp||r.cod)+')\n'
+    +'Familia: '+r.familia+' | Clase ABC: '+r.clase+'\n'
+    +'Ingresos totales (histórico): $'+r.ing_tot.toFixed(0)+' | Ventas últimos 6m: '+r.u6m+' unidades\n'
+    +'Tendencia: '+r.tend+' | Crecimiento 3m vs 3m anterior: '+r.acel_pct+'%\n'
+    +'Precio unitario: $'+r.precio.toFixed(2)+' | Demanda proyectada: '+rp.demMes.toFixed(1)+' ud/mes\n'
+    +'Stock de seguridad calculado: '+rp.safety+' ud | Punto de reorden: '+rp.rop+' ud\n'
+    +'Inventario objetivo: '+rp.objetivo+' ud | Cantidad sugerida a comprar: '+rp.comprar+' ud\n'
+    +'Estado del modelo: '+rp.urg+' | Días sin movimiento: '+r.dias_sin+'\n'
+    +(rp.tieneStock ? 'Stock actual registrado: '+rp.stock+' ud ('+rp.cobDias+' días de cobertura)\n' : 'Stock: sin datos en el archivo\n')
+    +'\nResponde con EXACTAMENTE esta estructura (usa emojis, sé directo y específico para este artículo):\n\n'
+    +'**📊 Situación actual**\n[1-2 oraciones describiendo el estado real del artículo]\n\n'
+    +'**🛒 Decisión de compra**\n[Cuánto comprar, cuándo, y por qué ese número específico]\n\n'
+    +'**⚠️ Riesgo principal**\n[El riesgo más importante a considerar para este artículo]\n\n'
+    +'**⚡ Acción inmediata**\n[Qué hacer HOY específicamente]';
+
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+    var data = await resp.json();
+    var text = (data.content&&data.content[0]&&data.content[0].text) || 'No se pudo obtener respuesta.';
+    // Convertir markdown simple a HTML
+    text = text
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\n\n/g,'</p><p>')
+      .replace(/\n/g,'<br>');
+    box.className = 'ai-box ai-result';
+    box.innerHTML = '<p>'+text+'</p>';
+  } catch(e) {
+    box.className = 'ai-box ai-error';
+    box.innerHTML = '⚠️ Error al conectar con la IA. Verifica tu conexión e intenta nuevamente.';
+  }
 }
 
 // ============================================================
