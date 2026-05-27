@@ -151,6 +151,16 @@ canvas{display:block;}
 .repo-sum b{font-weight:800;color:var(--t1);}
 .repo-sum .sep{color:var(--bd);}
 .bDesc{background:#e2e8f0;color:#475569;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:700;white-space:nowrap;text-decoration:line-through;}
+.leyenda-panel{border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:10px;background:#f8fafc;overflow:hidden;}
+.leyenda-panel summary{padding:9px 15px;font-size:12.5px;font-weight:700;color:var(--t2);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:6px;}
+.leyenda-panel summary::-webkit-details-marker{display:none}
+.leyenda-body{padding:12px 15px 14px;border-top:1px solid #e2e8f0;}
+.ley-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin-bottom:12px;}
+@media(max-width:700px){.ley-grid{grid-template-columns:1fr;}}
+.ley-item{display:flex;flex-direction:column;gap:2px;}
+.ley-k{font-weight:700;font-size:11.5px;color:var(--t2);}
+.ley-v{font-size:11.5px;color:var(--t3);line-height:1.45;}
+.ley-badges{font-size:11.5px;color:var(--t3);display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:8px;border-top:1px dashed #e2e8f0;}
 
 /* ===== Centro de Decisiones (Dashboard) ===== */
 .dc-wrap{background:linear-gradient(135deg,#ffffff,#fafbff);border:1px solid var(--bd);border-radius:13px;padding:18px 20px;margin-bottom:16px;}
@@ -434,6 +444,28 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
   </details>
 
   <div class="tb">
+    <details class="leyenda-panel" id="OC_LEYENDA">
+      <summary onclick="this.parentElement.open?this.textContent='📖 Ocultar leyenda':this.textContent='📖 ¿Qué significa cada columna? (click para ver)'">📖 ¿Qué significa cada columna? (click para ver)</summary>
+      <div class="leyenda-body">
+        <div class="ley-grid">
+          <div class="ley-item"><span class="ley-k">Clase A/B/C</span><span class="ley-v">Clasifica cada producto por importancia económica. <b>A</b> = el 20% de productos que genera el 80% de ingresos (los más críticos). <b>B</b> = el siguiente 15%. <b>C</b> = el resto (muchos artículos, poco ingreso).</span></div>
+          <div class="ley-item"><span class="ley-k">Demanda/mes</span><span class="ley-v">Cuántas unidades vendes en promedio por mes, calculado sobre la ventana de tiempo que eliges arriba (1m, 3m, 6m, 12m).</span></div>
+          <div class="ley-item"><span class="ley-k">Stock actual</span><span class="ley-v">Unidades en almacén según el archivo que importaste. Aparece <i>s/d</i> si el archivo no trae esa columna.</span></div>
+          <div class="ley-item"><span class="ley-k">Punto reorden</span><span class="ley-v">Número de unidades al que debes hacer el pedido para no quedarte sin stock mientras llega la mercancía (considera el tiempo de entrega).</span></div>
+          <div class="ley-item"><span class="ley-k">Comprar (ud)</span><span class="ley-v">Cantidad sugerida a pedir ahora. Si dice <i>Xm sin venta</i>, el artículo lleva X meses sin venderse y no se recomienda reponer.</span></div>
+          <div class="ley-item"><span class="ley-k">Inversión</span><span class="ley-v">Dinero que gastarías si compras la cantidad sugerida (unidades × precio unitario).</span></div>
+          <div class="ley-item"><span class="ley-k">Cobertura</span><span class="ley-v">Días que te dura el stock actual al ritmo de ventas actual. Rojo = menos días que el tiempo de entrega (¡peligro de quiebre!).</span></div>
+        </div>
+        <div class="ley-badges">
+          <b>Estados:</b>&nbsp;
+          <span class="bU">REPONER YA</span>&nbsp;Stock bajó del punto de reorden — pedido urgente&nbsp;&nbsp;
+          <span class="bRV">PEDIR PRONTO</span>&nbsp;Stock justo, haz el pedido esta semana&nbsp;&nbsp;
+          <span class="bM">EVALUAR</span>&nbsp;No hay stock histórico, revisar manualmente&nbsp;&nbsp;
+          <span class="bM">STOCK OK</span>&nbsp;Tienes cobertura suficiente por ahora&nbsp;&nbsp;
+          <span class="bDesc" style="text-decoration:none">YA NO COMPRAR</span>&nbsp;Lleva meses sin venderse — no reponer
+        </div>
+      </div>
+    </details>
     <div class="tw h560"><table id="OC_TABLE"><thead><tr>
       <th>#</th><th data-sort="cod">Codigo</th><th data-sort="nombre">Nombre</th><th>Familia</th>
       <th data-sort="clase">Clase</th><th data-sort="demView" id="TH_DEM" style="text-align:right">Demanda/mes</th>
@@ -519,12 +551,12 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
       </div>
       <div class="chart-card">
         <div class="cc-t" id="DEMAND_TITLE">Demanda: ventas reales vs pronostico</div>
-        <div class="cc-s">Lo que vendiste cada semana (linea solida) comparado con lo que el sistema proyecta que venderas (linea punteada). Si el pronostico sube, la demanda esta creciendo.</div>
+        <div class="cc-s"><b>¿Por qué importa?</b> Si la demanda sube, necesitas comprar más. Si baja, compra menos para no sobrestockear. La linea solida es lo que vendiste; la punteada es lo que el sistema estima que venderás próximamente.</div>
         <div class="chart-box"><canvas id="DEMAND_CHART"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="cc-t">Inventario proyectado y pedidos sugeridos</div>
-        <div class="cc-s">El area azul es el stock que tendras semana a semana. Cuando baja del nivel de seguridad (linea roja) hay riesgo de quiebre; las barras naranjas son los pedidos que el sistema recomienda lanzar.</div>
+        <div class="cc-t">¿Cuándo debo comprar? — Inventario proyectado</div>
+        <div class="cc-s"><b>Lee esto así:</b> el área azul es tu stock semana a semana. La línea roja es el <i>colchón mínimo</i> (stock de seguridad). Cuando el área azul BAJA POR DEBAJO de la línea roja → hay riesgo de quedarte sin stock antes de que llegue el pedido. Las barras naranjas muestran exactamente en qué semanas el sistema recomienda hacer un pedido y de cuántas unidades.</div>
         <div class="chart-box tall"><canvas id="INV_CHART"></canvas></div>
       </div>
     </div>
@@ -544,14 +576,14 @@ var RAW = {"items":[{"cod":"1U8846CTP","nombre":"GASKET MAKER (1853983)","famili
 
   <!-- Que significa cada fila de la tabla -->
   <details class="metric-help">
-    <summary>Que significa cada fila de la tabla</summary>
+    <summary>📖 ¿Cómo leer la tabla de planificación?</summary>
     <div class="mh-body">
-      <div class="mh-item"><span class="mh-dot" style="background:var(--t1)"></span><div><span class="mh-name">Ventas reales / Ingresos.</span> <span class="mh-desc">Lo que realmente vendiste cada semana, en unidades o en dinero. Es tu historial, no una estimacion.</span></div></div>
-      <div class="mh-item"><span class="mh-dot" style="background:var(--R)"></span><div><span class="mh-name">Pronostico estadistico.</span> <span class="mh-desc">La demanda esperada calculada con la tendencia de tus ventas recientes. Es la base neutra del pronostico.</span></div></div>
-      <div class="mh-item"><span class="mh-dot" style="background:var(--A)"></span><div><span class="mh-name">Pronostico final.</span> <span class="mh-desc">El pronostico ajustado con un margen de seguridad. Es la cifra que usa el sistema para recomendar pedidos.</span></div></div>
-      <div class="mh-item"><span class="mh-dot" style="background:var(--t4)"></span><div><span class="mh-name">Precio promedio.</span> <span class="mh-desc">Precio medio de venta por unidad en esa semana. Sirve para convertir unidades en dinero.</span></div></div>
-      <div class="mh-item"><span class="mh-dot" style="background:var(--B)"></span><div><span class="mh-name">Inventario proyectado.</span> <span class="mh-desc">El stock estimado que tendras al cierre de cada semana, restando ventas y sumando pedidos. Si llega a cero, hay riesgo de quiebre.</span></div></div>
-      <div class="mh-item"><span class="mh-dot" style="background:var(--P)"></span><div><span class="mh-name">Plan de pedidos.</span> <span class="mh-desc">Las unidades que conviene pedir esa semana para mantener el inventario por encima del nivel de seguridad.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--t1)"></span><div><span class="mh-name">Ventas reales / Ingresos.</span> <span class="mh-desc">Lo que realmente vendiste cada semana. Es tu historial real, no una estimación.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--R)"></span><div><span class="mh-name">Pronóstico estadístico.</span> <span class="mh-desc">Ventas esperadas calculadas con la tendencia reciente. Si sube = la demanda crece, compra más. Si baja = vende menos, no sobrestockees.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--A)"></span><div><span class="mh-name">Pronóstico final.</span> <span class="mh-desc">El pronóstico con margen de seguridad añadido. Es el que usa el sistema para calcular cuánto comprar.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--B)"></span><div><span class="mh-name">Inventario proyectado.</span> <span class="mh-desc">Stock estimado al cierre de cada semana = stock anterior − ventas + pedidos recibidos. Si llega a cero → quiebre de stock.</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--P)"></span><div><span class="mh-name">Plan de pedidos.</span> <span class="mh-desc">Cuánto pedir esa semana para evitar que el inventario caiga por debajo del stock de seguridad (línea roja del gráfico).</span></div></div>
+      <div class="mh-item"><span class="mh-dot" style="background:var(--t4)"></span><div><span class="mh-name">Precio promedio.</span> <span class="mh-desc">Precio medio de venta por unidad en esa semana.</span></div></div>
     </div>
   </details>
 
@@ -861,6 +893,10 @@ function loadBaseData() {
     hist: RAW.hist || {}
   };
   normalizeBrandCode(D.items, false); // separa marca (CTP) del codigo en los datos demo
+  // Reclasificar ABC los items de la demo segun Pareto 80/15/5 para mostrar B y C reales
+  D.items.sort(function(a,b){return b.ing_tot-a.ing_tot;});
+  var _tot=D.items.reduce(function(s,i){return s+i.ing_tot;},0), _ac=0;
+  D.items.forEach(function(i){_ac+=i.ing_tot;var p=_ac/_tot*100;i.clase=p<=80?'A':(p<=95?'B':'C');});
   document.getElementById('STATUS_BAR').textContent = '\u2705 ' + D.kpis.total_art.toLocaleString() + ' articulos \u00B7 Peru Tractor BASE';
   document.getElementById('DL_PANEL').style.display = 'block';
   initUI();
@@ -1636,7 +1672,7 @@ function renderOC() {
       ? '<td style="text-align:right;font-weight:600;color:'+(rp.cobDias<REPO.lead?'#dc2626':'#64748b')+'">'+(rp.cobDias>=999?'+999':rp.cobDias)+'d</td>'
       : '<td style="text-align:right;color:var(--t4)">&mdash;</td>';
     var compCell = esDesc
-      ? '<td style="text-align:right;font-weight:700;color:var(--t4)" title="Sin ventas en '+rp.meses_sin+' meses: no reponer">no comprar</td>'
+      ? '<td style="text-align:right" title="No reponer: lleva '+rp.meses_sin+' meses sin venderse"><span style="font-size:11px;color:#94a3b8;font-weight:700">'+rp.meses_sin+'m sin venta</span></td>'
       : '<td style="text-align:right;font-weight:800;font-size:13px;color:'+compColor+'" title="Cantidad recomendada a comprar">'+(rp.comprar>0?fmtN(rp.comprar):'0')+'</td>';
     return '<tr onclick="openProdModal(\''+r.cod+'\')"'+(esDesc?' style="opacity:.62"':'')+'>'
       +'<td style="color:var(--t4);font-weight:700">'+(i+1)+'</td>'
